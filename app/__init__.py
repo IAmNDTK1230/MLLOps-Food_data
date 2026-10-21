@@ -1,0 +1,1 @@
+"""Foody demo entry points."""

@@ -1,0 +1,2 @@
+{"product_id":"fixture-001","shop_id":"fixture-shop","product_name":"Offline sample headphones","price":"₫199.000","rating":"4,8","sold_count":"Đã bán 1,2k","keyword":"offline sample","crawl_timestamp":"2026-10-03T00:00:00Z","source":"offline-fixture","_raw":{"note":"Synthetic fixture, not live Shopee data"}}
+{"product_id":"fixture-invalid","product_name":"Rejected negative price","price":-1,"keyword":"offline sample","crawl_timestamp":"2026-10-03T00:00:00Z","source":"offline-fixture"}

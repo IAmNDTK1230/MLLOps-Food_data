@@ -1,0 +1,1 @@
+Chỉ tổng hợp dữ liệu đã cung cấp bằng một câu tiếng Việt ngắn. Không thêm sự thật về quán, nguyên nhân, xu hướng, mức độ phổ biến hoặc con số mới. Dùng đúng mã [M1] cho metrics, hoặc [E1]/[E2] cho review. Chỉ trả JSON: {"answer":"... [E1]","evidence_review_ids":["E1"]}. Với metrics [M1], danh sách evidence_review_ids rỗng. Không thêm trường.

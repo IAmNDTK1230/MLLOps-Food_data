@@ -1,0 +1,139 @@
+{
+  "research": {
+    "vn_msasar_filtered_rows": 5869,
+    "split_counts": {
+      "train": 4140,
+      "test": 887,
+      "validation": 842
+    },
+    "class_distributions": {
+      "train": {
+        "positive": 2625,
+        "negative": 1307,
+        "neutral": 208
+      },
+      "validation": {
+        "positive": 529,
+        "negative": 270,
+        "neutral": 43
+      },
+      "test": {
+        "positive": 560,
+        "negative": 284,
+        "neutral": 43
+      }
+    },
+    "split_leakage_checks": {
+      "review_ids_spanning_splits": 0,
+      "normalized_texts_spanning_splits": 0
+    },
+    "sentiment_tfidf_test_macro_f1": 0.6828540656101453,
+    "qwen_v1_test_macro_f1": 0.6217892056718716,
+    "qwen_v2a_test_macro_f1": 0.6144872207427964,
+    "aspect_test_micro_f1": 0.8322766570605188,
+    "aspect_test_macro_f1": 0.6336280013938793
+  },
+  "foody": {
+    "raw_review_count": 33946,
+    "ai_valid_count": 31694,
+    "unique_valid_reviews": 32457,
+    "restaurant_count": 2110
+  },
+  "rag": {
+    "document_count": 32457,
+    "vector_count_manifest": 32457,
+    "bm25_count_manifest": 32457,
+    "collection": "foody_39897b1e_634d0f66c29d",
+    "retrieval": {
+      "v1": {
+        "known_positive_hit_at_5": 0.0,
+        "known_positive_hit_at_10": 0.08333333333333333,
+        "known_positive_mrr": 0.018518518518518517,
+        "mean_latency_ms": 16.519116666586342
+      },
+      "v2": {
+        "known_positive_hit_at_5": 0.08333333333333333,
+        "known_positive_hit_at_10": 0.08333333333333333,
+        "known_positive_mrr": 0.05555555555555555,
+        "mean_latency_ms": 600.2905500002574
+      },
+      "v3": {
+        "known_positive_hit_at_5": 0.08333333333333333,
+        "known_positive_hit_at_10": 0.08333333333333333,
+        "known_positive_mrr": 0.16666666666666666,
+        "mean_latency_ms": 140.97019999978025
+      }
+    },
+    "v3_generator_counts": {
+      "qwen_1_5b": {
+        "valid_generation": 6,
+        "supported": 2,
+        "supported_but_incomplete": 1,
+        "unsupported": 0,
+        "correct_insufficient": 3,
+        "incorrect_insufficient": 0,
+        "extractive_fallback": 3,
+        "citation_valid": 3,
+        "clause_support_valid": 3
+      },
+      "qwen_3b": {
+        "valid_generation": 6,
+        "supported": 2,
+        "supported_but_incomplete": 1,
+        "unsupported": 0,
+        "correct_insufficient": 3,
+        "incorrect_insufficient": 0,
+        "extractive_fallback": 2,
+        "citation_valid": 3,
+        "clause_support_valid": 3
+      }
+    }
+  },
+  "models": {
+    "qwen_1_5b": {
+      "model": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+      "revision": "91cad51170dc346986eccefdc2dd33a9da36ead9",
+      "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "model_size_bytes": 1117320736,
+      "runtime": "llama.cpp",
+      "runtime_tag": "b11429"
+    },
+    "qwen_3b": {
+      "model": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+      "revision": "cc1e68eea5f05f88f41a6de1fc73110178f23715",
+      "model_sha256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+      "model_size_bytes": 2104932768,
+      "runtime": "llama.cpp",
+      "runtime_tag": "b11429",
+      "quantization": "Q4_K_M"
+    }
+  },
+  "verification": {
+    "tests": 287,
+    "failures": 0,
+    "errors": 0
+  },
+  "sources": {
+    "dataset": "reports/food_dataset_report.json",
+    "split": "data/food/splits/metadata.json",
+    "rule": "reports/baselines/rule_based_test_metrics.json",
+    "tfidf": "reports/baselines/tfidf_test_metrics.json",
+    "qwen_v1": "reports/proposed_v1/qwen_test_metrics.json",
+    "qwen_v2a": "reports/proposed_v2/test_metrics.json",
+    "aspect": "reports/aspect_classifier/test_metrics.json",
+    "foody": "reports/foody_intelligence/enrichment.json",
+    "restaurant_mart": "data/foody/mart/restaurant_summary.parquet",
+    "chroma": "data/foody/vector_store/index_manifest.json",
+    "bm25": "data/foody/lexical_index/index_manifest.json",
+    "rag_retrieval": "reports/rag_v3/retrieval_policies.csv",
+    "rag_generation": "reports/rag_v3/generation_metrics.json",
+    "qwen_1_5b_provenance": "models/qwen_v1/provenance.json",
+    "qwen_3b_provenance": "models/qwen_v3/provenance.json",
+    "tests": "reports\\final\\test_results.xml"
+  },
+  "caveats": [
+    "RAG known-positive labels are incomplete for six queries.",
+    "Foody predictions have no trusted gold-label accuracy.",
+    "Qwen V2-A reused the viewed test split and is exploratory."
+  ]
+}

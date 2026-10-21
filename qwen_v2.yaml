@@ -1,0 +1,7 @@
+base_runtime_config: qwen_v1.yaml
+prompt_dir: prompts/food_sentiment_v2
+candidate_names: [v2_a1, v2_a2, v2_a3]
+selection_metric: validation_macro_f1
+tie_breaks: [neutral_precision, json_validity_rate, lower_mean_latency]
+example_max_characters: 150
+test_hygiene: V1 test outcomes were previously inspected; V2 test reuse is exploratory and requires untouched external confirmation.

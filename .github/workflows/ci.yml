@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-and-tests:
+    name: Lint, tests, and app import
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - name: Install test dependencies only
+        run: python -m pip install -r requirements-ci.txt
+      - name: Ruff
+        run: python -m ruff check .
+      - name: Compile sources
+        run: python -m compileall -q src app scripts
+      - name: Unit and synthetic integration tests
+        run: python -m pytest -q --junitxml=test_results.xml
+      - name: Lightweight application import
+        run: python -c "import app.app, app.api; print('app imports PASS')"
+      - name: Upload JUnit result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results
+          path: test_results.xml
+          if-no-files-found: warn
+
+  docker-build:
+    name: Compose syntax and application image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
+      - name: Build artifact-free Streamlit image
+        run: docker build --file Dockerfile.rag --tag food-review-intelligence:ci .

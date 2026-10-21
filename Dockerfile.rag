@@ -1,0 +1,13 @@
+FROM python:3.12-slim
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+COPY requirements-demo.txt ./
+RUN pip install -r requirements-demo.txt
+COPY app ./app
+COPY src ./src
+COPY prompts ./prompts
+COPY config ./config
+COPY qwen_v1.yaml ./qwen_v1.yaml
+COPY qwen_v3_3b.yaml ./qwen_v3_3b.yaml
+EXPOSE 8501
+CMD ["python", "-m", "streamlit", "run", "app/app.py", "--server.address", "0.0.0.0"]

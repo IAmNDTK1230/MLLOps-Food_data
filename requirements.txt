@@ -1,0 +1,17 @@
+playwright==1.51.0
+pandas==2.3.3
+pyarrow==23.0.1
+pydantic==2.11.7
+python-dotenv==1.1.1
+tenacity==9.1.2
+databricks-sdk==0.72.0
+prefect==3.4.20
+# Compatible Prefect server dependencies; also used by the separate Phase 2 API.
+fastapi==0.115.12
+starlette==0.46.2
+uvicorn==0.35.0
+websockets==13.1
+filelock==3.19.1
+pytest==8.4.2
+ruff==0.13.3
+# PySpark and Delta are supplied by the Databricks serverless runtime; do not pip install them.

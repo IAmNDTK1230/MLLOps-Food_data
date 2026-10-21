@@ -1,0 +1,9 @@
+task,model,dataset,input,accuracy,macro_f1,micro_f1,neutral_f1,retrieval_hit5,retrieval_hit10,MRR,latency_ms,status,notes
+sentiment,Rule-Based Sentiment,VN-MSASar v3 test,text,0.5050732807215332,0.4312787685745347,,0.16771488469601678,,,,0.02379842164599774,frozen_test,
+sentiment,TF-IDF Sentiment,VN-MSASar v3 test,text,0.8094701240135288,0.6828540656101453,,0.41304347826086957,,,,0.36518647125140924,frozen_test,
+sentiment,Qwen V1,VN-MSASar v3 test,text,0.7328072153325818,0.6217892056718716,,0.2577777777777778,,,,93.66028421643536,frozen_test,
+sentiment,Qwen V2-A,VN-MSASar v3 test,text,0.7237880496054115,0.6144872207427964,,0.2471042471042471,,,,378.2445691093595,exploratory,Viewed test reused; requires external confirmation
+aspect,Aspect TF-IDF,VN-MSASar v3 aspect test,text,,0.6336280013938793,0.8322766570605188,,,,,,frozen_test,
+retrieval,RAG V1,Foody six-query known-positive set,question + reviews,,,,,0.0,0.08333333333333333,0.018518518518518517,16.519116666586342,research_baseline,Incomplete known positives; latency from one shared policy run
+retrieval,RAG V2,Foody six-query known-positive set,question + reviews,,,,,0.08333333333333333,0.08333333333333333,0.05555555555555555,600.2905500002574,research_baseline,Incomplete known positives; latency from one shared policy run
+retrieval,RAG V3,Foody six-query known-positive set,question + reviews,,,,,0.08333333333333333,0.08333333333333333,0.16666666666666666,140.97019999978025,accepted_demo,Incomplete known positives; latency from one shared policy run

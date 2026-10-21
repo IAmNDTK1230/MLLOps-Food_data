@@ -1,0 +1,12 @@
+# Install alongside Phase 1 requirements; runtime Spark packages remain untouched.
+scikit-learn==1.7.2
+mlflow==3.10.0
+dvc==3.63.0
+# DVC 3.63 uses pathspec's pre-1.0 gitwildmatch API.
+pathspec==0.12.1
+# Restaurant EDA plots and tokenizer-only analysis; no model weights.
+matplotlib==3.11.2
+tokenizers==0.22.2
+# Keep tokenizer dependency compatible with Prefect/Typer's Click constraint.
+huggingface-hub==0.36.0
+click==8.2.1

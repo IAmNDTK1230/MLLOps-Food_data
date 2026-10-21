@@ -1,0 +1,13 @@
+model_repo: Qwen/Qwen2.5-3B-Instruct-GGUF
+model_revision: cc1e68eea5f05f88f41a6de1fc73110178f23715
+model_file: qwen2.5-3b-instruct-q4_k_m.gguf
+model_dir: models/qwen_v3
+quantization: Q4_K_M
+runtime: llama.cpp
+port: 8194
+gpu_layers: 99
+threads: 8
+context_size: 2048
+temperature: 0.0
+seed: 42
+server_log_path: logs/qwen_v3_3b_server.log

@@ -1,0 +1,83 @@
+services:
+  pipeline:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATA_DIR: /app/data
+      STATE_DIR: /app/state
+      LOG_DIR: /app/logs
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    init: true
+    shm_size: "1gb"
+    volumes:
+      - ./data:/app/data
+      - ./state:/app/state
+      - ./logs:/app/logs
+  prefect-server:
+    build: .
+    profiles: [orchestration]
+    command: prefect server start --host 0.0.0.0
+    environment:
+      PREFECT_SERVER_ANALYTICS_ENABLED: "false"
+    ports: ["4200:4200"]
+    volumes:
+      - prefect-data:/home/pipeline/.prefect
+  scheduler:
+    build: .
+    profiles: [orchestration]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATA_DIR: /app/data
+      STATE_DIR: /app/state
+      LOG_DIR: /app/logs
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      PREFECT_API_URL: http://prefect-server:4200/api
+    command: python -m src.cli serve
+    depends_on: [prefect-server]
+    restart: on-failure
+    init: true
+    shm_size: "1gb"
+    volumes:
+      - ./data:/app/data
+      - ./state:/app/state
+      - ./logs:/app/logs
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag
+    command: python -m streamlit run app/app.py --server.address 0.0.0.0
+    environment:
+      QWEN_BASE_URL: http://qwen:8193
+    ports: ["8501:8501"]
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models:ro
+      - ./state:/app/state
+      - ./reports:/app/reports:ro
+  rag-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag
+    command: uvicorn app.api:api --host 0.0.0.0 --port 8000
+    environment:
+      QWEN_BASE_URL: http://qwen:8193
+    ports: ["8000:8000"]
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models:ro
+      - ./state:/app/state
+      - ./reports:/app/reports:ro
+  qwen:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command: >-
+      -m /models/qwen_v1/qwen2.5-1.5b-instruct-q4_k_m.gguf
+      --host 0.0.0.0 --port 8193 --ctx-size 2048 --n-gpu-layers 99
+    ports: ["8193:8193"]
+    volumes:
+      - ./models:/models:ro
+volumes:
+  prefect-data:

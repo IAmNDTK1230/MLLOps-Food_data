@@ -1,0 +1,25 @@
+model_repo: Qwen/Qwen2.5-1.5B-Instruct-GGUF
+model_revision: 91cad51170dc346986eccefdc2dd33a9da36ead9
+model_file: qwen2.5-1.5b-instruct-q4_k_m.gguf
+parameter_count: 1540000000
+quantization: Q4_K_M
+runtime: llama.cpp
+runtime_tag: b11429
+runtime_commit: d81235049384534c167caea52b85a694f6103d14
+runtime_assets:
+  - name: llama-b11429-bin-win-cuda-12.4-x64.zip
+    sha256: dd6df685c1024e6aa55ca55ad35038692d5e284d4dc895e7a646c3245d3d14ff
+  - name: cudart-llama-bin-win-cuda-12.4-x64.zip
+    sha256: 8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6
+model_dir: models/qwen_v1
+runtime_dir: .qwen-runtime/b11429
+port: 8193
+gpu_layers: 99
+threads: 8
+context_size: 2048
+temperature: 0.0
+seed: 42
+max_new_tokens: 32
+max_attempts: 2
+structured_output: json_schema
+prompt_dir: prompts/food_sentiment

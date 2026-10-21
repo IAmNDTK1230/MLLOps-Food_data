@@ -1,0 +1,655 @@
+schema: '2.0'
+stages:
+  food_import:
+    cmd: python -m src.cli food-data-import --dataset vn_msasar_v3
+    deps:
+    - path: src/food/config.py
+      hash: md5
+      md5: 55e0e87cd47b8980c5ebe129717363fa
+      size: 1508
+    - path: src/food/data.py
+      hash: md5
+      md5: 1c92732b3c311c5d4e20d1f12025ccaa
+      size: 9696
+    - path: src/ml/cli.py
+      hash: md5
+      md5: 67127d7a43132bf7a6647843c2cf267c
+      size: 3100
+    params:
+      params.yaml:
+        food.dataset_repo: phamluan/vn_msa_sar_v3
+        food.dataset_revision: 6f3f17b390dcf1bf411804e1bc8246bf88ea1bf4
+    outs:
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+  food_prepare:
+    cmd: python -m src.cli food-prepare
+    deps:
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+    - path: src/food/adapters.py
+      hash: md5
+      md5: 93d9932551cd44a838318217cf84432f
+      size: 4804
+    - path: src/food/data.py
+      hash: md5
+      md5: 1c92732b3c311c5d4e20d1f12025ccaa
+      size: 9696
+    - path: src/ml/features.py
+      hash: md5
+      md5: 6ed08e397a9b5cf2ed6973e2e1bad14f
+      size: 1411
+    outs:
+    - path: data/food/metadata/preparation.json
+      hash: md5
+      md5: f833bd1ea1bb672b83cc78bc072d5b35
+      size: 2662
+    - path: data/food/processed/reviews.parquet
+      hash: md5
+      md5: fcf96b0f105f3f24a7c16bd0f1238f60
+      size: 577669
+    - path: data/food/rejected
+      hash: md5
+      md5: 5e9ed1aae15766584b28f7680f479329.dir
+      size: 2
+      nfiles: 1
+    - path: reports/food_label_mapping.json
+      hash: md5
+      md5: 50632bdb96e76bbe0e81aeb1e8ff41b8
+      size: 827
+  food_split:
+    cmd: python -m src.cli food-split
+    deps:
+    - path: data/food/metadata/preparation.json
+      hash: md5
+      md5: f833bd1ea1bb672b83cc78bc072d5b35
+      size: 2662
+    - path: data/food/processed/reviews.parquet
+      hash: md5
+      md5: fcf96b0f105f3f24a7c16bd0f1238f60
+      size: 577669
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+    - path: src/food/split.py
+      hash: md5
+      md5: a44d0aec8c4f2a4933d98239fd383b84
+      size: 6434
+    params:
+      params.yaml:
+        food.random_seed: 42
+        food.test_fraction: 0.15
+        food.train_fraction: 0.7
+        food.validation_fraction: 0.15
+    outs:
+    - path: data/food/splits
+      hash: md5
+      md5: e5fd9eb8a3d81561599fe3e6a5164a8c.dir
+      size: 580850
+      nfiles: 2
+  food_analysis:
+    cmd: python -m src.cli food-analysis
+    deps:
+    - path: data/food/metadata/preparation.json
+      hash: md5
+      md5: f833bd1ea1bb672b83cc78bc072d5b35
+      size: 2662
+    - path: data/food/processed/reviews.parquet
+      hash: md5
+      md5: fcf96b0f105f3f24a7c16bd0f1238f60
+      size: 577669
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+    - path: data/food/splits
+      hash: md5
+      md5: e5fd9eb8a3d81561599fe3e6a5164a8c.dir
+      size: 580850
+      nfiles: 2
+    - path: src/food/analysis.py
+      hash: md5
+      md5: 4b4af2e93071b83a3a0212843bb0dbf0
+      size: 13318
+    - path: src/food/interfaces.py
+      hash: md5
+      md5: 3b0b0b0642c54fcbcda5e0e90da701b5
+      size: 2052
+    params:
+      params.yaml:
+        food.chunk_sizes:
+        - 128
+        - 256
+        - 512
+        food.overlaps:
+        - 0
+        - 32
+        - 64
+        food.tokenizer_repo: Qwen/Qwen2.5-7B-Instruct
+        food.tokenizer_revision: a09a35458c702b33eeacc393d103063234e8bc28
+    outs:
+    - path: data/food/metadata/tokenizer
+      hash: md5
+      md5: 486477b2aa80393c0289d0505f6ebc61.dir
+      size: 7032021
+      nfiles: 2
+    - path: data/food/rag
+      hash: md5
+      md5: 815de50ace0a600bfcdde6ed9c32e846.dir
+      size: 4422414
+      nfiles: 2
+    - path: reports/aspect_distribution.csv
+      hash: md5
+      md5: 5fd11bd392f4c9b141ba646d257715dc
+      size: 311
+    - path: reports/aspect_distribution.png
+      hash: md5
+      md5: 9a2a54d82388fc15d07504af1420f5df
+      size: 41813
+    - path: reports/chunking_comparison.csv
+      hash: md5
+      md5: f6b4da797b7458e7b7f2a97ae4a0507a
+      size: 1146
+    - path: reports/food_dataset_report.json
+      hash: md5
+      md5: 36b896b390baed7b8009d92111490f6d
+      size: 5915
+    - path: reports/food_experiment_plan.json
+      hash: md5
+      md5: 420946d291f4c6c78ccf1f4688c4a688
+      size: 1539
+    - path: reports/qwen_output_schema.json
+      hash: md5
+      md5: 2749dd25c7143a11194be0909f4e0ebf
+      size: 953
+    - path: reports/sentiment_by_aspect.csv
+      hash: md5
+      md5: 11270d12177d73c7cc2ab68d3e9f35d2
+      size: 965
+    - path: reports/sentiment_by_aspect.png
+      hash: md5
+      md5: 3f515cd86f99d514e00572f6e23d7085
+      size: 52385
+    - path: reports/sentiment_distribution.csv
+      hash: md5
+      md5: 6d7d0d5aac3f29570c5b87a4da182090
+      size: 125
+    - path: reports/sentiment_distribution.png
+      hash: md5
+      md5: 8ca2465c583d811447d3eec0da645e46
+      size: 34658
+    - path: reports/task2_slide_evidence.json
+      hash: md5
+      md5: 550641f3bbfb27eb9a201d4f1644ddac
+      size: 5828
+    - path: reports/text_length_distribution.csv
+      hash: md5
+      md5: 6e156214f1e96f8b8d8e91d766d5ddc0
+      size: 232799
+    - path: reports/text_length_distribution.png
+      hash: md5
+      md5: bd2a38494dabd166f98a60e623e22caa
+      size: 32941
+    - path: reports/token_statistics.json
+      hash: md5
+      md5: c5b5c33332102c74caa47367f341be6b
+      size: 1372
+  baseline_rule:
+    cmd: python -m src.cli baseline-rule
+    deps:
+    - path: data/food/metadata/preparation.json
+      hash: md5
+      md5: f833bd1ea1bb672b83cc78bc072d5b35
+      size: 2662
+    - path: data/food/processed/reviews.parquet
+      hash: md5
+      md5: fcf96b0f105f3f24a7c16bd0f1238f60
+      size: 577669
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+    - path: data/food/splits
+      hash: md5
+      md5: e5fd9eb8a3d81561599fe3e6a5164a8c.dir
+      size: 580850
+      nfiles: 2
+    - path: src/baselines/metrics.py
+      hash: md5
+      md5: ef6e94069b60573360d2ab58b6404fd4
+      size: 3435
+    - path: src/baselines/rule_based.py
+      hash: md5
+      md5: f12b03fe45bb7fd63835d513e05866a5
+      size: 4130
+    - path: src/baselines/runner.py
+      hash: md5
+      md5: ddd46116540018d78593630588b19d68
+      size: 21026
+    - path: src/baselines/tfidf_logreg.py
+      hash: md5
+      md5: d7c653fdd891485ddb46f262310e2699
+      size: 1541
+    outs:
+    - path: reports/baselines/environment.json
+      hash: md5
+      md5: 668072f68a268c94e9def7b75d04cb37
+      size: 3731
+    - path: reports/baselines/rule_based_validation_metrics.json
+      hash: md5
+      md5: 20533e44db9d7c33c1c451a6d02605a7
+      size: 3850
+    - path: reports/baselines/rule_definition.json
+      hash: md5
+      md5: 8836c5e539c8bd8cd7d82ba5f2ffa5f7
+      size: 1774
+  baseline_tfidf:
+    cmd: python -m src.cli baseline-tfidf
+    deps:
+    - path: data/food/metadata/preparation.json
+      hash: md5
+      md5: f833bd1ea1bb672b83cc78bc072d5b35
+      size: 2662
+    - path: data/food/processed/reviews.parquet
+      hash: md5
+      md5: fcf96b0f105f3f24a7c16bd0f1238f60
+      size: 577669
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+    - path: data/food/splits
+      hash: md5
+      md5: e5fd9eb8a3d81561599fe3e6a5164a8c.dir
+      size: 580850
+      nfiles: 2
+    - path: reports/baselines/environment.json
+      hash: md5
+      md5: 668072f68a268c94e9def7b75d04cb37
+      size: 3731
+    - path: src/baselines/metrics.py
+      hash: md5
+      md5: ef6e94069b60573360d2ab58b6404fd4
+      size: 3435
+    - path: src/baselines/rule_based.py
+      hash: md5
+      md5: f12b03fe45bb7fd63835d513e05866a5
+      size: 4130
+    - path: src/baselines/runner.py
+      hash: md5
+      md5: ddd46116540018d78593630588b19d68
+      size: 21026
+    - path: src/baselines/tfidf_logreg.py
+      hash: md5
+      md5: d7c653fdd891485ddb46f262310e2699
+      size: 1541
+    - path: src/ml/mlflow_tracking.py
+      hash: md5
+      md5: 02704ec59d331e3ce90220f0afda2d18
+      size: 427
+    outs:
+    - path: models/tfidf_logreg.joblib
+      hash: md5
+      md5: a6efed3206f0bd5ef19ae269abdcda1e
+      size: 342442
+    - path: reports/baselines/class_weight_comparison.csv
+      hash: md5
+      md5: e5ab72d4bdaee9064ac8451e0fba8ef4
+      size: 668
+    - path: reports/baselines/class_weight_comparison.png
+      hash: md5
+      md5: cb4dee0d9fd732d494955982effe732c
+      size: 34168
+    - path: reports/baselines/experiments
+      hash: md5
+      md5: ae39069bace419b72a38ea2f2ca94ff9.dir
+      size: 88989
+      nfiles: 3
+    - path: reports/baselines/tfidf_experiments.csv
+      hash: md5
+      md5: e021039a75134402524a90beca3a3889
+      size: 729
+    - path: reports/baselines/tfidf_selection.json
+      hash: md5
+      md5: 7b3e1287b8d6ffd6fe534649c923d369
+      size: 4170
+    - path: reports/baselines/tfidf_validation_metrics.json
+      hash: md5
+      md5: 20566d8c0beb4d2b02c0016b1b42c6f0
+      size: 3653
+  baseline_evaluate:
+    cmd: python -m src.cli baseline-evaluate
+    deps:
+    - path: data/food/metadata/preparation.json
+      hash: md5
+      md5: f833bd1ea1bb672b83cc78bc072d5b35
+      size: 2662
+    - path: data/food/processed/reviews.parquet
+      hash: md5
+      md5: fcf96b0f105f3f24a7c16bd0f1238f60
+      size: 577669
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+    - path: data/food/splits
+      hash: md5
+      md5: e5fd9eb8a3d81561599fe3e6a5164a8c.dir
+      size: 580850
+      nfiles: 2
+    - path: models/tfidf_logreg.joblib
+      hash: md5
+      md5: a6efed3206f0bd5ef19ae269abdcda1e
+      size: 342442
+    - path: reports/baselines/class_weight_comparison.csv
+      hash: md5
+      md5: e5ab72d4bdaee9064ac8451e0fba8ef4
+      size: 668
+    - path: reports/baselines/rule_based_validation_metrics.json
+      hash: md5
+      md5: 20533e44db9d7c33c1c451a6d02605a7
+      size: 3850
+    - path: reports/baselines/tfidf_selection.json
+      hash: md5
+      md5: 7b3e1287b8d6ffd6fe534649c923d369
+      size: 4170
+    - path: reports/task2_slide_evidence.json
+      hash: md5
+      md5: 550641f3bbfb27eb9a201d4f1644ddac
+      size: 5828
+    - path: src/baselines/metrics.py
+      hash: md5
+      md5: ef6e94069b60573360d2ab58b6404fd4
+      size: 3435
+    - path: src/baselines/reporting.py
+      hash: md5
+      md5: d81d3a6b7d46eef31e2c71ebde846b99
+      size: 4619
+    - path: src/baselines/rule_based.py
+      hash: md5
+      md5: f12b03fe45bb7fd63835d513e05866a5
+      size: 4130
+    - path: src/baselines/runner.py
+      hash: md5
+      md5: ddd46116540018d78593630588b19d68
+      size: 21026
+    - path: src/ml/cli.py
+      hash: md5
+      md5: 81e31ba77f3af0f6136973d7b8fda7c9
+      size: 4105
+    outs:
+    - path: reports/baselines/baseline_comparison.csv
+      hash: md5
+      md5: e460684cc201c9c926abab718aa1b73d
+      size: 435
+    - path: reports/baselines/baseline_comparison.png
+      hash: md5
+      md5: 745db16c733e65e2829b912753f4ad8c
+      size: 37996
+    - path: reports/baselines/error_by_aspect.csv
+      hash: md5
+      md5: 903853adecb25b0e3bb08c00eac75d0e
+      size: 2133
+    - path: reports/baselines/evaluation_state.json
+      hash: md5
+      md5: c590e48bbc11238d7a0c4bd008778099
+      size: 5107
+    - path: reports/baselines/failure_analysis_summary.json
+      hash: md5
+      md5: dbd999ba2f9a98cc5a530b7de4b5f16a
+      size: 10941
+    - path: reports/baselines/failure_cases.csv
+      hash: md5
+      md5: ed8532e0d80d5d8a99ba2eaf6a7b33db
+      size: 87647
+    - path: reports/baselines/rule_based_classification_report.csv
+      hash: md5
+      md5: a6e6b93b453e9db0df00916d00c6085d
+      size: 411
+    - path: reports/baselines/rule_based_confusion_matrix.png
+      hash: md5
+      md5: dac33651daffb22e4c8b54d84caa620e
+      size: 29424
+    - path: reports/baselines/rule_based_test_metrics.json
+      hash: md5
+      md5: d0fb7a52e68a6c85a8d29cec2d1c345e
+      size: 3921
+    - path: reports/baselines/tfidf_classification_report.csv
+      hash: md5
+      md5: 20184cd95eb99f297ea906511f4a30a0
+      size: 410
+    - path: reports/baselines/tfidf_confusion_matrix.png
+      hash: md5
+      md5: 55dbe94d0e01ccbcab1e4aa4a05d1229
+      size: 31055
+    - path: reports/baselines/tfidf_test_metrics.json
+      hash: md5
+      md5: 3f80fbe7af7a8efe3de0d7875f9c3945
+      size: 3945
+    - path: reports/task2_baseline_evidence.json
+      hash: md5
+      md5: ab314f2bbce3e8c63dcd94493810386e
+      size: 31678
+  proposed_v1:
+    cmd: python -m src.cli proposed-v1
+    deps:
+    - path: data/food/metadata/preparation.json
+      hash: md5
+      md5: f833bd1ea1bb672b83cc78bc072d5b35
+      size: 2662
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+    - path: data/food/splits
+      hash: md5
+      md5: e5fd9eb8a3d81561599fe3e6a5164a8c.dir
+      size: 580850
+      nfiles: 2
+    - path: models/qwen_v1/provenance.json
+      hash: md5
+      md5: b6c3c4ec8674ce06e0d9e0c99d038f36
+      size: 1137
+    - path: prompts/food_sentiment
+      hash: md5
+      md5: 231b26f3157d0adaccac64d201ca319e.dir
+      size: 2111
+      nfiles: 3
+    - path: qwen_v1.yaml
+      hash: md5
+      md5: b70c18bc4dd1c0796a306e187c46dc7d
+      size: 803
+    - path: reports/baselines/baseline_comparison.csv
+      hash: md5
+      md5: e460684cc201c9c926abab718aa1b73d
+      size: 435
+    - path: reports/baselines/evaluation_state.json
+      hash: md5
+      md5: c590e48bbc11238d7a0c4bd008778099
+      size: 5107
+    - path: reports/baselines/rule_based_classification_report.csv
+      hash: md5
+      md5: a6e6b93b453e9db0df00916d00c6085d
+      size: 411
+    - path: reports/baselines/tfidf_classification_report.csv
+      hash: md5
+      md5: 20184cd95eb99f297ea906511f4a30a0
+      size: 410
+    - path: src/proposed_v1
+      hash: md5
+      md5: 7b527a82a874884b6ab91cc510b4eda0.dir
+      size: 93924
+      nfiles: 10
+    outs:
+    - path: reports/proposed_v1
+      hash: md5
+      md5: 401df03d17823693e194d72c6279a499.dir
+      size: 2792627
+      nfiles: 24
+    - path: reports/task2_proposed_v1_evidence.json
+      hash: md5
+      md5: 43f925f202269f28fa151a356c1af7dc
+      size: 18456
+  proposed_v2:
+    cmd: python -m src.cli proposed-v2
+    deps:
+    - path: data/food/metadata/preparation.json
+      hash: md5
+      md5: f833bd1ea1bb672b83cc78bc072d5b35
+      size: 2662
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+    - path: data/food/splits
+      hash: md5
+      md5: e5fd9eb8a3d81561599fe3e6a5164a8c.dir
+      size: 580850
+      nfiles: 2
+    - path: models/qwen_v1/provenance.json
+      hash: md5
+      md5: b6c3c4ec8674ce06e0d9e0c99d038f36
+      size: 1137
+    - path: prompts/food_sentiment_v2
+      hash: md5
+      md5: d48171b77390648111660c83c5b6a6ff.dir
+      size: 6902
+      nfiles: 3
+    - path: qwen_v1.yaml
+      hash: md5
+      md5: b70c18bc4dd1c0796a306e187c46dc7d
+      size: 803
+    - path: qwen_v2.yaml
+      hash: md5
+      md5: 5a4b3124829d90f4df9d1471df22ca00
+      size: 382
+    - path: reports/baselines/baseline_comparison.csv
+      hash: md5
+      md5: e460684cc201c9c926abab718aa1b73d
+      size: 435
+    - path: reports/proposed_v1
+      hash: md5
+      md5: 401df03d17823693e194d72c6279a499.dir
+      size: 2792627
+      nfiles: 24
+    - path: src/proposed_v1/runner.py
+      hash: md5
+      md5: 86ee15c66d220c0fda4c96e2dbcf3697
+      size: 19140
+    - path: src/proposed_v1/runtime.py
+      hash: md5
+      md5: 684c273d13baf30192442f9153ea1a4f
+      size: 7512
+    - path: src/proposed_v2
+      hash: md5
+      md5: 1948c5117629d8e15dbad6c984588e39.dir
+      size: 100149
+      nfiles: 8
+    outs:
+    - path: reports/proposed_v2
+      hash: md5
+      md5: b122a920be1e1e1d41a0dac64afac7a8.dir
+      size: 3413500
+      nfiles: 44
+    - path: reports/task2_proposed_v2_evidence.json
+      hash: md5
+      md5: 2d0c1214dab54a62ab944d7f15728fa5
+      size: 16043
+  proposed_v2_aspect:
+    cmd: python -m src.cli proposed-v2-aspect
+    deps:
+    - path: data/food/metadata/preparation.json
+      hash: md5
+      md5: f833bd1ea1bb672b83cc78bc072d5b35
+      size: 2662
+    - path: data/food/source/vn_msasar_v3
+      hash: md5
+      md5: 2a1b1756732d20b1477901f706218b35.dir
+      size: 4897600
+      nfiles: 5
+    - path: data/food/splits
+      hash: md5
+      md5: e5fd9eb8a3d81561599fe3e6a5164a8c.dir
+      size: 580850
+      nfiles: 2
+    - path: models/qwen_v1/provenance.json
+      hash: md5
+      md5: b6c3c4ec8674ce06e0d9e0c99d038f36
+      size: 1137
+    - path: prompts/food_sentiment_aspect
+      hash: md5
+      md5: 3acd2520b2d4ad2a63f3f94c8d24357a.dir
+      size: 4400
+      nfiles: 3
+    - path: qwen_aspect.yaml
+      hash: md5
+      md5: 98393fdf56ba31b55a2912194c1f276c
+      size: 515
+    - path: qwen_v1.yaml
+      hash: md5
+      md5: b70c18bc4dd1c0796a306e187c46dc7d
+      size: 803
+    - path: reports/baselines
+      hash: md5
+      md5: 860b23bf9182d899e58ce78a43d9d320.dir
+      size: 355157
+      nfiles: 23
+    - path: reports/proposed_v1
+      hash: md5
+      md5: 401df03d17823693e194d72c6279a499.dir
+      size: 2792627
+      nfiles: 24
+    - path: reports/proposed_v2
+      hash: md5
+      md5: b122a920be1e1e1d41a0dac64afac7a8.dir
+      size: 3413500
+      nfiles: 44
+    - path: src/aspect_conditioned
+      hash: md5
+      md5: 02c91b2150089f3120707da8a084dc1f.dir
+      size: 90400
+      nfiles: 10
+    - path: src/baselines/tfidf_logreg.py
+      hash: md5
+      md5: d7c653fdd891485ddb46f262310e2699
+      size: 1541
+    - path: src/proposed_v1/runner.py
+      hash: md5
+      md5: 86ee15c66d220c0fda4c96e2dbcf3697
+      size: 19140
+    - path: src/proposed_v1/runtime.py
+      hash: md5
+      md5: 684c273d13baf30192442f9153ea1a4f
+      size: 7512
+    - path: src/proposed_v2/analysis.py
+      hash: md5
+      md5: a7bb98d60971bc02047b01365f48113a
+      size: 16401
+    - path: src/proposed_v2/runner.py
+      hash: md5
+      md5: 5be9d0741533c2da474fe22cdebf84d7
+      size: 19096
+    outs:
+    - path: reports/aspect_conditioned
+      hash: md5
+      md5: c1f07cb032f0359af8faf8bff4e7d8a5.dir
+      size: 5015112
+      nfiles: 57
+    - path: reports/task2_aspect_v2_evidence.json
+      hash: md5
+      md5: 4f6f1f758aa1d7559d2779862163daa8
+      size: 8355

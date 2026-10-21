@@ -1,0 +1,101 @@
+bundle:
+  name: shopee-data-mlops-platform
+sync:
+  exclude:
+    - .env
+    - .env.*
+    - .venv/**
+    - data/**
+    - state/**
+    - logs/**
+variables:
+  catalog:
+    default: shopee
+  raw_schema:
+    default: raw
+  bronze_schema:
+    default: bronze
+  silver_schema:
+    default: silver
+  gold_schema:
+    default: gold
+  volume:
+    default: landing
+resources:
+  jobs:
+    data_pipeline:
+      name: shopee-data-pipeline
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      parameters:
+        - name: run_id
+          default: manual
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "2"
+      tasks:
+        - task_key: setup
+          environment_key: default
+          spark_python_task:
+            python_file: ./databricks/00_setup.py
+            parameters: &parameters
+              - --catalog
+              - ${var.catalog}
+              - --raw-schema
+              - ${var.raw_schema}
+              - --bronze-schema
+              - ${var.bronze_schema}
+              - --silver-schema
+              - ${var.silver_schema}
+              - --gold-schema
+              - ${var.gold_schema}
+              - --volume
+              - ${var.volume}
+              - --run-id
+              - "{{job.parameters.run_id}}"
+        - task_key: bronze_products
+          depends_on: [{task_key: setup}]
+          environment_key: default
+          spark_python_task:
+            python_file: ./databricks/01_bronze_products.py
+            parameters: *parameters
+        - task_key: bronze_reviews
+          depends_on: [{task_key: setup}]
+          environment_key: default
+          spark_python_task:
+            python_file: ./databricks/02_bronze_reviews.py
+            parameters: *parameters
+        - task_key: silver_products
+          depends_on: [{task_key: bronze_products}]
+          environment_key: default
+          spark_python_task:
+            python_file: ./databricks/03_silver_products.py
+            parameters: *parameters
+        - task_key: silver_reviews
+          depends_on: [{task_key: bronze_reviews}]
+          environment_key: default
+          spark_python_task:
+            python_file: ./databricks/04_silver_reviews.py
+            parameters: *parameters
+        - task_key: gold_products
+          depends_on: [{task_key: silver_products}]
+          environment_key: default
+          spark_python_task:
+            python_file: ./databricks/05_gold_product_metrics.py
+            parameters: *parameters
+        - task_key: gold_reviews
+          depends_on: [{task_key: silver_reviews}]
+          environment_key: default
+          spark_python_task:
+            python_file: ./databricks/06_gold_review_dataset.py
+            parameters: *parameters
+targets:
+  dev:
+    default: true
+    mode: development
+  test:
+    mode: development
+    variables:
+      catalog: shopee_test

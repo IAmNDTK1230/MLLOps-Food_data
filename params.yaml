@@ -1,0 +1,14 @@
+food:
+  data_dir: data/food
+  reports_dir: reports
+  dataset_repo: phamluan/vn_msa_sar_v3
+  dataset_revision: 6f3f17b390dcf1bf411804e1bc8246bf88ea1bf4
+  random_seed: 42
+  train_fraction: 0.70
+  validation_fraction: 0.15
+  test_fraction: 0.15
+  # Tokenizer-only reference for analysis, NOT a final model selection.
+  tokenizer_repo: Qwen/Qwen2.5-7B-Instruct
+  tokenizer_revision: a09a35458c702b33eeacc393d103063234e8bc28
+  chunk_sizes: [128, 256, 512]
+  overlaps: [0, 32, 64]

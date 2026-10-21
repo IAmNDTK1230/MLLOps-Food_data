@@ -1,0 +1,16 @@
+sentiment_model: models/tfidf_logreg.joblib
+aspect_model: models/aspect_tfidf.joblib
+embedding_model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+embedding_manifest: data/foody/vector_store/index_manifest.json
+qwen_model: Qwen/Qwen2.5-3B-Instruct-GGUF
+qwen_config: qwen_v3_3b.yaml
+qwen_provenance: models/qwen_v3/provenance.json
+rag_version: RAG_V3
+retrieval_policy: aspect_complaint_bm25_filtered_else_rrf_with_causal_mart_guard
+top_k: 5
+prompt_path: prompts/rag/rag_v3.txt
+prompt_version: rag_v3:81e19ef10f78
+fallback_policy: clause_validation_then_extractive_or_insufficient
+vector_collection: foody_39897b1e_634d0f66c29d
+llmops_backend: state/llmops.sqlite
+default_restaurant: Hanuri - Quán Ăn Hàn Quốc - Nguyễn Đình Chiểu

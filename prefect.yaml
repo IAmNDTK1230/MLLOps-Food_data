@@ -1,0 +1,22 @@
+name: shopee-data-mlops-platform
+prefect-version: "3"
+build: null
+push: null
+pull:
+  - prefect.deployments.steps.set_working_directory:
+      directory: "{{ $PROJECT_DIR }}"
+deployments:
+  - name: shopee-daily
+    entrypoint: src/orchestration/flow.py:shopee_data_pipeline
+    parameters:
+      keyword: "{{ $CRAWL_KEYWORD }}"
+      pages: 2
+      skip_reviews: true
+    schedules:
+      - cron: "{{ $CRAWL_CRON }}"
+        timezone: "{{ $CRAWL_TIMEZONE }}"
+        active: true
+    work_pool:
+      name: shopee-process
+      work_queue_name: default
+      job_variables: {}

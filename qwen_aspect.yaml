@@ -1,0 +1,10 @@
+base_runtime_config: qwen_v1.yaml
+prompt_dir: prompts/food_sentiment_aspect
+candidate_names: [v2_b1, v2_b2, v2_b3]
+input_features: [text, aspect]
+selection: validation_macro_f1_then_json_validity_then_lower_latency
+tfidf_trials:
+  - {name: A_unigram_c1, ngram_range: [1, 1], c: 1.0}
+  - {name: B_bigram_c1, ngram_range: [1, 2], c: 1.0}
+  - {name: C_bigram_c2, ngram_range: [1, 2], c: 2.0}
+test_hygiene: "Exploratory reused test; V1 and V2-A outcomes previously inspected. Text+aspect is a distinct input protocol."

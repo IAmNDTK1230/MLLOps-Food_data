@@ -1,0 +1,229 @@
+stages:
+  food_import:
+    frozen: true
+    cmd: python -m src.cli food-data-import --dataset vn_msasar_v3
+    deps:
+      - src/food/data.py
+      - src/food/config.py
+      - src/ml/cli.py
+    params: [food.dataset_repo, food.dataset_revision]
+    outs:
+      - data/food/source/vn_msasar_v3
+  food_prepare:
+    frozen: true
+    cmd: python -m src.cli food-prepare
+    deps:
+      - data/food/source/vn_msasar_v3
+      - src/food/data.py
+      - src/food/adapters.py
+      - src/ml/features.py
+    outs:
+      - data/food/processed/reviews.parquet
+      - data/food/rejected
+      - data/food/metadata/preparation.json
+      - reports/food_label_mapping.json
+  food_split:
+    frozen: true
+    cmd: python -m src.cli food-split
+    deps:
+      - data/food/source/vn_msasar_v3
+      - data/food/processed/reviews.parquet
+      - data/food/metadata/preparation.json
+      - src/food/split.py
+    params: [food.random_seed, food.train_fraction, food.validation_fraction, food.test_fraction]
+    outs:
+      - data/food/splits
+  food_analysis:
+    frozen: true
+    cmd: python -m src.cli food-analysis
+    deps:
+      - data/food/source/vn_msasar_v3
+      - data/food/processed/reviews.parquet
+      - data/food/metadata/preparation.json
+      - data/food/splits
+      - src/food/analysis.py
+      - src/food/interfaces.py
+    params: [food.tokenizer_repo, food.tokenizer_revision, food.chunk_sizes, food.overlaps]
+    outs:
+      - data/food/rag
+      - data/food/metadata/tokenizer:
+          persist: true
+      - reports/sentiment_distribution.csv
+      - reports/aspect_distribution.csv
+      - reports/text_length_distribution.csv
+      - reports/sentiment_by_aspect.csv
+      - reports/sentiment_distribution.png
+      - reports/aspect_distribution.png
+      - reports/text_length_distribution.png
+      - reports/sentiment_by_aspect.png
+      - reports/chunking_comparison.csv
+      - reports/token_statistics.json
+      - reports/food_experiment_plan.json
+      - reports/qwen_output_schema.json
+      - reports/task2_slide_evidence.json
+    metrics:
+      - reports/food_dataset_report.json:
+          cache: true
+  baseline_rule:
+    frozen: true
+    cmd: python -m src.cli baseline-rule
+    deps:
+      - data/food/source/vn_msasar_v3
+      - data/food/processed/reviews.parquet
+      - data/food/metadata/preparation.json
+      - data/food/splits
+      - src/baselines/rule_based.py
+      - src/baselines/runner.py
+      - src/baselines/metrics.py
+      - src/baselines/tfidf_logreg.py
+    outs:
+      - reports/baselines/environment.json:
+          persist: true
+      - reports/baselines/rule_definition.json:
+          persist: true
+    metrics:
+      - reports/baselines/rule_based_validation_metrics.json:
+          cache: true
+          persist: true
+  baseline_tfidf:
+    frozen: true
+    cmd: python -m src.cli baseline-tfidf
+    deps:
+      - data/food/source/vn_msasar_v3
+      - data/food/processed/reviews.parquet
+      - data/food/metadata/preparation.json
+      - data/food/splits
+      - reports/baselines/environment.json
+      - src/baselines/tfidf_logreg.py
+      - src/baselines/runner.py
+      - src/baselines/metrics.py
+      - src/baselines/rule_based.py
+      - src/ml/mlflow_tracking.py
+    outs:
+      - models/tfidf_logreg.joblib:
+          persist: true
+      - reports/baselines/tfidf_selection.json:
+          persist: true
+      - reports/baselines/tfidf_validation_metrics.json:
+          persist: true
+      - reports/baselines/tfidf_experiments.csv:
+          persist: true
+      - reports/baselines/experiments:
+          persist: true
+      - reports/baselines/class_weight_comparison.csv:
+          persist: true
+      - reports/baselines/class_weight_comparison.png:
+          persist: true
+  baseline_evaluate:
+    frozen: true
+    cmd: python -m src.cli baseline-evaluate
+    deps:
+      - data/food/source/vn_msasar_v3
+      - data/food/processed/reviews.parquet
+      - data/food/metadata/preparation.json
+      - data/food/splits
+      - reports/task2_slide_evidence.json
+      - reports/baselines/tfidf_selection.json
+      - reports/baselines/rule_based_validation_metrics.json
+      - reports/baselines/class_weight_comparison.csv
+      - models/tfidf_logreg.joblib
+      - src/baselines/runner.py
+      - src/baselines/metrics.py
+      - src/baselines/rule_based.py
+      - src/baselines/reporting.py
+      - src/ml/cli.py
+    outs:
+      - reports/baselines/evaluation_state.json:
+          persist: true
+      - reports/baselines/rule_based_test_metrics.json:
+          persist: true
+      - reports/baselines/tfidf_test_metrics.json:
+          persist: true
+      - reports/baselines/rule_based_confusion_matrix.png:
+          persist: true
+      - reports/baselines/tfidf_confusion_matrix.png:
+          persist: true
+      - reports/baselines/rule_based_classification_report.csv:
+          persist: true
+      - reports/baselines/tfidf_classification_report.csv:
+          persist: true
+      - reports/baselines/failure_cases.csv:
+          persist: true
+      - reports/baselines/error_by_aspect.csv:
+          persist: true
+      - reports/baselines/failure_analysis_summary.json:
+          persist: true
+      - reports/baselines/baseline_comparison.png:
+          persist: true
+      - reports/task2_baseline_evidence.json:
+          persist: true
+    metrics:
+      - reports/baselines/baseline_comparison.csv:
+          cache: true
+          persist: true
+  proposed_v1:
+    frozen: true
+    cmd: python -m src.cli proposed-v1
+    deps:
+      - data/food/splits
+      - data/food/metadata/preparation.json
+      - data/food/source/vn_msasar_v3
+      - reports/baselines/evaluation_state.json
+      - reports/baselines/baseline_comparison.csv
+      - reports/baselines/rule_based_classification_report.csv
+      - reports/baselines/tfidf_classification_report.csv
+      - prompts/food_sentiment
+      - qwen_v1.yaml
+      - models/qwen_v1/provenance.json
+      - src/proposed_v1
+    outs:
+      - reports/proposed_v1:
+          persist: true
+      - reports/task2_proposed_v1_evidence.json:
+          persist: true
+  proposed_v2:
+    frozen: true
+    cmd: python -m src.cli proposed-v2
+    deps:
+      - data/food/splits
+      - data/food/metadata/preparation.json
+      - data/food/source/vn_msasar_v3
+      - reports/baselines/baseline_comparison.csv
+      - reports/proposed_v1
+      - qwen_v1.yaml
+      - qwen_v2.yaml
+      - prompts/food_sentiment_v2
+      - models/qwen_v1/provenance.json
+      - src/proposed_v2
+      - src/proposed_v1/runtime.py
+      - src/proposed_v1/runner.py
+    outs:
+      - reports/proposed_v2:
+          persist: true
+      - reports/task2_proposed_v2_evidence.json:
+          persist: true
+  proposed_v2_aspect:
+    cmd: python -m src.cli proposed-v2-aspect
+    deps:
+      - data/food/splits
+      - data/food/metadata/preparation.json
+      - data/food/source/vn_msasar_v3
+      - reports/baselines
+      - reports/proposed_v1
+      - reports/proposed_v2
+      - qwen_v1.yaml
+      - qwen_aspect.yaml
+      - prompts/food_sentiment_aspect
+      - models/qwen_v1/provenance.json
+      - src/aspect_conditioned
+      - src/proposed_v1/runtime.py
+      - src/proposed_v1/runner.py
+      - src/proposed_v2/runner.py
+      - src/proposed_v2/analysis.py
+      - src/baselines/tfidf_logreg.py
+    outs:
+      - reports/aspect_conditioned:
+          persist: true
+      - reports/task2_aspect_v2_evidence.json:
+          persist: true
+# All previous experiments are frozen. Aspect experiment never downloads data/model.
