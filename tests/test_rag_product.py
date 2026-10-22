@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from src.llm.gateway import LLMGateway
+from src.rag.cli import portable_artifact_path
 from src.rag.embeddings import EmbeddingSpec
 from src.rag.evaluation import known_positive_scores
 from src.rag.monitoring import record, summary
@@ -26,6 +27,14 @@ class FakeEmbeddings:
 
     def queries(self, texts):
         return self.documents(texts)
+
+
+def test_saved_windows_artifact_path_resolves_portably(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    artifact = tmp_path / "models" / "embeddings" / "model.onnx"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_bytes(b"frozen-model")
+    assert portable_artifact_path(r"models\embeddings\model.onnx").read_bytes() == b"frozen-model"
 
 
 def make_documents(path):

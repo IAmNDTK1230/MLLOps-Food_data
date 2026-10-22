@@ -13,6 +13,11 @@ from src.rag.vector_store import build_index
 COMMANDS = {"rag-build-index", "rag-evaluate", "rag-query", "restaurant-health-report"}
 
 
+def portable_artifact_path(value):
+    """Resolve a saved project-relative path on Windows or Linux containers."""
+    return Path(value.replace("\\", "/"))
+
+
 def add_commands(commands):
     commands.add_parser("rag-build-index", help="Compare embeddings, then persist Foody Chroma index")
     commands.add_parser("rag-evaluate", help="Evaluate known-positive retrieval on full index")
@@ -30,7 +35,7 @@ def add_commands(commands):
 
 def selected_retriever():
     selection = json.loads(SELECTION.read_text(encoding="utf-8"))
-    model_path = Path(selection["model_file"])
+    model_path = portable_artifact_path(selection["model_file"])
     if digest(model_path) != selection["model_hash"]:
         raise ValueError("Embedding artifact checksum differs from selected model")
     spec = next(item for item in CANDIDATES if item.name == selection["model"])

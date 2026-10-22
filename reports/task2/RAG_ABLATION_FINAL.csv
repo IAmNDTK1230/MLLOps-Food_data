@@ -1,0 +1,12 @@
+Stage,Variant,Hit@5,Hit@10,MRR,Mean retrieval latency ms,p95 retrieval latency ms,Accepted evidence packets,Rejected unsupported attempts,Supported complete,Supported incomplete,Unsupported accepted,Correct insufficient,Fallback count,Relevant limitation
+Retrieval,Dense MiniLM,0.000000,0.083333,0.018519,15.761,18.319,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Six questions; incomplete known-positive labels; V2 comparison run
+Retrieval,BM25,0.083333,0.083333,0.166667,135.941,188.462,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Six questions; incomplete known-positive labels; V2 comparison run
+Retrieval,RRF,0.083333,0.083333,0.041667,134.744,182.258,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Six questions; incomplete known-positive labels; V2 comparison run
+Retrieval,RRF + expansion,0.083333,0.083333,0.055556,330.792,419.119,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Six questions; incomplete known-positive labels; V2 comparison run
+Retrieval,Evidence rerank,0.083333,0.083333,0.055556,313.404,398.832,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Six questions; incomplete known-positive labels; V2 comparison run
+Retrieval,V3 routed retrieval,0.083333,0.083333,0.166667,140.970,195.149,N/A,N/A,N/A,N/A,N/A,N/A,N/A,Six questions; incomplete known-positive labels; V3 run latency not paired with V2 run
+Generation/safety,V3 evidence compatibility,N/A,N/A,N/A,N/A,N/A,3,N/A,N/A,N/A,N/A,N/A,N/A,Three packets accepted and three insufficient; no packet-off control
+Generation/safety,V3 clause-level validation,N/A,N/A,N/A,N/A,N/A,N/A,5,N/A,N/A,N/A,N/A,N/A,Five Qwen 3B attempts rejected for unsupported clauses; no validator-off control
+Generation/safety,V3 insufficient-evidence guard,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,3,N/A,Three zero-generation refusals; no guard-off control
+Generation/safety,V3 extractive fallback,N/A,N/A,N/A,N/A,N/A,N/A,N/A,1,1,0,N/A,2,Complaint and food answers preserved cited evidence after failed generation; no fallback-off control
+Generation/safety,V3 final Qwen 3B system,N/A,N/A,N/A,N/A,N/A,3,5,2,1,0,3,2,Six fixed cases; unsupported accepted is validator-detected and not a population estimate

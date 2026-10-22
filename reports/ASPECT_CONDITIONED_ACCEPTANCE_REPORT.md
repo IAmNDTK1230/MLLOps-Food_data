@@ -240,7 +240,7 @@ issue without inference or dependency installation.
 Created `src/aspect_conditioned/{prompts,runtime,runner,analysis}.py`, initializer,
 `qwen_aspect.yaml`, three `prompts/food_sentiment_aspect/v2_b*.txt` files,
 `tests/test_aspect_conditioned.py`, recovery/verification scripts,
-`ASPECT_CONDITIONED.md`, this report, `reports/aspect_conditioned/` artifacts and
+`docs/experiments/ASPECT_CONDITIONED.md`, this report, `reports/aspect_conditioned/` artifacts and
 `reports/task2_aspect_v2_evidence.json` (slides 12–14). Updated CLI dispatch,
 food DAG test, README/report index, ignore rules, `dvc.yaml` and `dvc.lock`.
 
@@ -258,7 +258,7 @@ fails explicit target separation, price and neutral judgments. Freeze all choice
 before untouched licensed external confirmation. Do not keep optimizing this
 reused test. No LoRA/QLoRA, larger model, RAG, embeddings or serving was implemented.
 
-Commands are in `ASPECT_CONDITIONED.md`. Completed CLI/DVC execution returns saved
+Commands are in `docs/experiments/ASPECT_CONDITIONED.md`. Completed CLI/DVC execution returns saved
 results; it does not repeat test inference. Read-only integrity check:
 
 ```powershell

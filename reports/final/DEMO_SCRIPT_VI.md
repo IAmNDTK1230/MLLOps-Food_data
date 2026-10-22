@@ -2,7 +2,7 @@
 
 ## Trước khi vào lớp
 
-Từ thư mục dự án, chạy `.\scripts\start_demo.cmd`. Đợi bảng `demo-preflight` có chín dòng `PASS`, sau đó mở địa chỉ Streamlit được in ra. Chuẩn bị sẵn `KEY_NUMBERS.json`, `MODEL_COMPARISON.csv`, `reports/rag_v3/RAG_V3_ACCEPTANCE_REPORT.md`, và `reports/rag_v3/health_report.json` để đối chiếu nếu máy chạy chậm. Không chạy lại huấn luyện, crawl hay xây index trong buổi demo.
+Từ thư mục dự án, chạy `.\scripts\start_demo.cmd`. Đợi bảng `demo-preflight` có chín dòng `PASS`, sau đó mở địa chỉ Streamlit được in ra. Chuẩn bị sẵn `KEY_NUMBERS.json`, `MODEL_COMPARISON.csv`, `reports/final/RAG_V3_ACCEPTANCE_REPORT.md`, và `reports/rag_v3/health_report.json` để đối chiếu nếu máy chạy chậm. Không chạy lại huấn luyện, crawl hay xây index trong buổi demo.
 
 ## 0:00–0:50 — Bài toán
 

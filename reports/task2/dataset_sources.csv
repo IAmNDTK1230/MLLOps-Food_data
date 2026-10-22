@@ -1,0 +1,3 @@
+source,origin,access,raw_rows,filtered_rows,format,important_fields,role
+VN-MSASar v3,https://huggingface.co/datasets/phamluan/vn_msa_sar_v3,public offline pinned revision,76785,5869,Parquet,review_id; sentence; aspect; sentiment; place_type; language,research benchmark; provided labels
+First-party Foody crawl,data/foody/source/foody_reviews.csv,first-party local export; no public URL documented,33946,33938,CSV,restaurant; review; rating; review time,real-world demo/RAG; no trusted gold sentiment/aspect labels

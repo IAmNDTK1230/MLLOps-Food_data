@@ -1,0 +1,9 @@
+ablation,hit_at_5,hit_at_10,mrr,retrieval_latency_ms,supported_answers,unsupported_accepted,fallback_rate,scope
+Dense only,0.0,0.08333333333333333,0.018518518518518517,15.760816666594716,,,,six queries; incomplete known positives
+BM25 only,0.08333333333333333,0.08333333333333333,0.16666666666666666,135.9406833335015,,,,six queries; incomplete known positives
+RRF,0.08333333333333333,0.08333333333333333,0.041666666666666664,134.74374999971891,,,,six queries; incomplete known positives
+RRF + expansion,0.08333333333333333,0.08333333333333333,0.05555555555555555,330.7921833331117,,,,six queries; incomplete known positives
+Evidence rerank,0.08333333333333333,0.08333333333333333,0.05555555555555555,313.40353333325766,,,,six queries; incomplete known positives
+V3 routed retrieval,0.08333333333333333,0.08333333333333333,0.16666666666666666,140.97019999978025,,,,six queries; incomplete known positives
+V3 + clause validation,,,,,2,0,0.3333333333333333,same accepted end-to-end V3 outcome; stages not separately isolated
+V3 + fallback,,,,,2,0,0.3333333333333333,same accepted end-to-end V3 outcome; stages not separately isolated

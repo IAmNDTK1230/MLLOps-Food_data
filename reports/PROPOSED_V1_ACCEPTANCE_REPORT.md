@@ -151,7 +151,7 @@ The baseline evidence, weights and canonical split were only read.
 Created code/config: src/proposed_v1/{__init__,runtime,runner,analysis,reporting}.py;
 qwen_v1.yaml; scripts/setup_qwen_v1.py; scripts/recover_qwen_reports.py;
 prompts/food_sentiment/v1_a.txt, v1_b.txt, v1_c.txt; tests/test_proposed_v1.py;
-PROPOSED_V1.md; this report.
+docs/experiments/PROPOSED_V1.md; this report.
 
 Changed: src/ml/cli.py; dvc.yaml/dvc.lock; tests/test_food_pipeline.py;
 README.md; reports/README.md; .gitignore/.dvcignore. No Phase 1 files changed.

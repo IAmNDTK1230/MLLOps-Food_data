@@ -184,7 +184,7 @@ No external data was downloaded/evaluated and no access request was sent.
 Implementation: `src/proposed_v2/{examples,runner,analysis}.py`, package initializer,
 `qwen_v2.yaml`, three prompt files and `tests/test_proposed_v2.py`.
 Integration: `src/ml/cli.py`, `tests/test_food_pipeline.py`, `dvc.yaml`, `dvc.lock`,
-`.gitignore`, `README.md`, `reports/README.md`, `PROPOSED_V2.md` and this report.
+`.gitignore`, `README.md`, `reports/README.md`, `docs/experiments/PROPOSED_V2.md` and this report.
 
 `proposed_v2/` contains example/prompt manifests, protocol/selection snapshots,
 validation checkpoints/predictions/metrics/classification reports/failures,
@@ -211,6 +211,6 @@ contains final test metrics. No production model was registered.
 | Protected artifact SHA audit | PASS: 60 unchanged |
 | MLflow selected-only test logging | PASS |
 
-Run commands from the project virtual environment as documented in `PROPOSED_V2.md`.
+Run commands from the project virtual environment as documented in `docs/experiments/PROPOSED_V2.md`.
 A completed `python -m src.cli proposed-v2` validates recorded hashes and returns
 saved results without further inference. Do not delete checkpoints to retune on test.

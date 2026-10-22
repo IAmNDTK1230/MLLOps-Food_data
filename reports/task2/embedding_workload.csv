@@ -1,0 +1,8 @@
+policy,chunk_count,reference_documents_per_second,reference_actual_seconds,estimated_seconds_at_reference_throughput,estimate_note
+one_review_one_document,32457,30.77561511949778,1054.633672599999,1054.633672599999,reference measured build
+max_128_overlap_0,46968,30.77561511949778,,1526.1433384070233,estimate only; no alternate index built
+max_128_overlap_32,49063,30.77561511949778,,1594.216713768178,estimate only; no alternate index built
+max_256_overlap_0,34962,30.77561511949778,,1136.0292837120242,estimate only; no alternate index built
+max_256_overlap_32,35057,30.77561511949778,,1139.1161432152746,estimate only; no alternate index built
+max_512_overlap_0,32688,30.77561511949778,,1062.139615181587,estimate only; no alternate index built
+max_512_overlap_64,32692,30.77561511949778,,1062.2695882133028,estimate only; no alternate index built

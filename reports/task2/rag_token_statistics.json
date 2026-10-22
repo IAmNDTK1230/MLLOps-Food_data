@@ -1,0 +1,36 @@
+{
+  "minilm_embedding": {
+    "document_count": 32457,
+    "total_tokens": 3750416,
+    "mean_tokens_per_document": 115.55029731644946,
+    "median_tokens_per_document": 92.0,
+    "p90": 224.0,
+    "p95": 288.0,
+    "p99": 465.0,
+    "max": 2124,
+    "tokenizer_file": "models\\embeddings\\models--Qdrant--paraphrase-multilingual-MiniLM-L12-v2-onnx-Q\\snapshots\\faf4aa4225822f3bc6376869cb1164e8e3feedd0\\tokenizer.json",
+    "tokenizer_sha256": "fa685fc160bbdbab64058d4fc91b60e62d207e8dc60b9af5c002c5ab946ded00",
+    "special_tokens_included": false,
+    "truncation": "disabled"
+  },
+  "qwen2_5_3b_generation": {
+    "document_count": 32457,
+    "total_tokens": 4105360,
+    "mean_tokens_per_document": 126.48612009735959,
+    "median_tokens_per_document": 101.0,
+    "p90": 244.0,
+    "p95": 315.0,
+    "p99": 511.0,
+    "max": 2249,
+    "tokenizer_file": "models\\task2_tokenizers\\qwen2.5_3b\\tokenizer.json",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "special_tokens_included": false,
+    "truncation": "disabled"
+  },
+  "corpus": {
+    "document_count": 32457,
+    "sha256": "52019e46d6f5205247bbf523fd57b089f5c55ef62e4769e4b368e3213e66a4f3",
+    "embedding_model_revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0",
+    "qwen_tokenizer_revision": "aa8e72537993ba99e69dfaafa59ed015b17504d1"
+  }
+}

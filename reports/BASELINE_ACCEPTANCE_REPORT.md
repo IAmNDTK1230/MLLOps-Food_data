@@ -122,11 +122,11 @@ reports/task2_baseline_evidence.json, including existing Slides 3–6 and new Sl
 ## Files created/changed
 
 Created: src/baselines/__init__.py, rule_based.py, tfidf_logreg.py, metrics.py,
-runner.py, reporting.py; tests/test_food_baselines.py; BASELINES.md;
+runner.py, reporting.py; tests/test_food_baselines.py; docs/experiments/BASELINES.md;
 reports/BASELINE_ACCEPTANCE_REPORT.md.
 
 Changed: src/ml/cli.py; dvc.yaml; dvc.lock; tests/test_food_pipeline.py (frozen DAG
-expectations); README.md; PHASE2.md; .gitignore.
+expectations); README.md; docs/experiments/PHASE2.md; .gitignore.
 
 Generated: models/tfidf_logreg.joblib; reports/baselines/environment.json,
 rule_definition.json, rule_based_validation_metrics.json, rule_based_test_metrics.json,

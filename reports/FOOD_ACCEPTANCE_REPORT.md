@@ -118,7 +118,7 @@ Changed configuration/docs:
 - params.yaml: food-only source/revision/split/tokenizer/chunk parameters.
 - dvc.yaml: four data-only stages.
 - requirements-ml.txt: matplotlib/tokenizers and compatible dependency pins.
-- README.md, PHASE2.md, reports/README.md, reports/PHASE2_IMPLEMENTATION_REPORT.md.
+- README.md, docs/experiments/PHASE2.md, reports/README.md, reports/PHASE2_IMPLEMENTATION_REPORT.md.
 - .gitignore: keep this acceptance document in version control.
 
 Created execution artifacts:

@@ -35,4 +35,4 @@ Model versions and checksums are recorded in `reports/foody_intelligence/version
 
 The four Streamlit pages show restaurant intelligence, source/AI review fields, a cited RAG answer with mode, and separated research versus demo monitoring. The Windows launcher runs read-only preflight, starts the pinned local llama.cpp server if needed, and runs Streamlit. `docker compose config` passed previously; Docker runtime remains **NOT VERIFIED** because the daemon was unavailable. Existing CI/test workflows are local syntax/unit checks; they do not establish live Docker or cloud runtime acceptance. Phase 1 Databricks processing is outside this demo path.
 
-The complete measured V3 result and limits are in `reports/rag_v3/RAG_V3_ACCEPTANCE_REPORT.md`. The six-query known-positive retrieval set is incomplete and too small for a general reliability claim.
+The complete measured V3 result and limits are in `reports/final/RAG_V3_ACCEPTANCE_REPORT.md`. The six-query known-positive retrieval set is incomplete and too small for a general reliability claim.

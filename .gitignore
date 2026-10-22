@@ -29,6 +29,13 @@ reports/**
 !reports/final/*.md
 !reports/final/*.json
 !reports/final/*.csv
+!reports/task2/
+!reports/task2/figures/
+!reports/task2/*.md
+!reports/task2/*.csv
+!reports/task2/*.json
+!reports/task2/*.png
+!reports/task2/figures/*.png
 !reports/PHASE2_IMPLEMENTATION_REPORT.md
 !reports/README.md
 !reports/FOOD_ACCEPTANCE_REPORT.md
@@ -47,3 +54,10 @@ mlruns/
 mlartifacts/
 .env.*
 !.env.example
+
+# Local historical Shopee acceptance evidence and generated diagnostics.
+LIVE_ACCEPTANCE_REPORT.md
+TEST_REPORT.md
+scripts/inspect_public_search.py
+scripts/databricks_bootstrap.sql
+docs/local_history/

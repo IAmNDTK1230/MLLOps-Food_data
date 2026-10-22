@@ -1,0 +1,8 @@
+policy,max_tokens,overlap_tokens,review_count,chunk_count,reviews_requiring_split,pct_reviews_requiring_split,mean_chunks_per_review,duplicated_tokens_from_overlap,estimated_embedding_seconds,metadata_implication
+one_review_one_document,,0,32457,32457,0,0.0,1.0,0,1054.633672599999,one review_id per vector
+max_128_overlap_0,128,0,32457,46968,11235,34.615029115445054,1.4470838339957481,0,1526.1433384070233,inherit review/restaurant metadata; add deterministic chunk_id
+max_128_overlap_32,128,32,32457,49063,11235,34.615029115445054,1.5116307730227685,531392,1594.216713768178,inherit review/restaurant metadata; add deterministic chunk_id
+max_256_overlap_0,256,0,32457,34962,2239,6.8983578272791695,1.0771790368795637,0,1136.0292837120242,inherit review/restaurant metadata; add deterministic chunk_id
+max_256_overlap_32,256,32,32457,35057,2239,6.8983578272791695,1.0801059863819824,83200,1139.1161432152746,inherit review/restaurant metadata; add deterministic chunk_id
+max_512_overlap_0,512,0,32457,32688,222,0.6839818837230798,1.0071171087900914,0,1062.139615181587,inherit review/restaurant metadata; add deterministic chunk_id
+max_512_overlap_64,512,64,32457,32692,222,0.6839818837230798,1.0072403487691408,15040,1062.2695882133028,inherit review/restaurant metadata; add deterministic chunk_id

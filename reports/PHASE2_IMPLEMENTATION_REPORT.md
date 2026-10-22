@@ -2,7 +2,7 @@
 
 > Historical report: superseded on 2026-10-13 by the Vietnamese restaurant data phase.
 > Current source, measured results and commands are in FOOD_ACCEPTANCE_REPORT.md and
-> PHASE2.md. Product/rating ML CLI commands are disabled; no model execution is enabled.
+> docs/experiments/PHASE2.md. Product/rating ML CLI commands are disabled; no model execution is enabled.
 
 Date: 2026-10-12, Asia/Ho_Chi_Minh.
 
@@ -25,7 +25,7 @@ rerun. The verified Phase 1 Bronze/Silver/Gold code and bundle were not modified
 - `dvc.yaml`, `.dvcignore`, `.dvc/config`, `.dvc/.gitignore`.
 - `Dockerfile.api`, `docker-compose.api.yml`.
 - `.github/workflows/ci.yml`.
-- `PHASE2.md`, this report, `reports/README.md`, reports/models `.gitkeep` placeholders.
+- `docs/experiments/PHASE2.md`, this report, `reports/README.md`, reports/models `.gitkeep` placeholders.
 
 Existing files extended: `src/cli.py`, README, `.env.example`, `.gitignore`,
 `.dockerignore`, and a descriptive comment in `requirements.txt`. Phase 1's direct
@@ -101,6 +101,6 @@ or test-set acceptance results.
 - API prediction acceptance using actual trained/registered weights.
 - Docker daemon startup/build/runtime and GitHub Actions execution.
 
-Exact usage commands and dataset format are in `PHASE2.md`. No generated ML data
+Exact usage commands and dataset format are in `docs/experiments/PHASE2.md`. No generated ML data
 report, experiment-comparison CSV or trained weights are shipped while the real
 dataset is absent.

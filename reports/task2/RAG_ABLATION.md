@@ -1,0 +1,3 @@
+# RAG ablation evidence
+
+Retrieval figures reuse saved six-query known-positive judgments. Known positives are incomplete; the values are not full relevance accuracy. The RRF + expansion and other V2 rows come from the V2 candidate run, while the V3 routed row comes from the V3 shared policy run; latency is not a strictly controlled head-to-head replay across these two files. The two generation-stage rows repeat the same accepted Qwen 3B V3 end-to-end result and cannot isolate clause validation from fallback. Blank cells mean inapplicable/unmeasured, never zero. In the measured retrieval comparison V3 routing tied BM25 at known-positive MRR 0.1667 and reduced latency relative to reranking; this tiny set cannot establish general superiority.

@@ -1,0 +1,15 @@
+# Three-family frozen-evidence generator benchmark
+
+The benchmark uses the same six saved RAG V3 evidence packets, questions, `prompts/rag/rag_v3.txt`, llama.cpp b11429, temperature 0, seed 42, 128 output-token cap, and no rerun of retrieval. All models are Q4_K_M GGUF. Qwen/Llama are 3B class; DeepSeek-R1-Distill-Qwen is 1.5B class and smaller. The application telemetry's legacy `generation_mode=qwen` enum means accepted generated answer; actual family is verified by model provenance. This six-case set is a fixed safety smoke test, not a general benchmark. The 3B comparison cannot isolate architecture from instruction tuning or tokenizer differences. GPU layers were requested; per-process GPU assignment was not independently confirmed. GPU measurements are sampled system totals.
+
+| Family | Cases | Valid schema / applicable | Complete | Incomplete | Validator-detected unsupported accepted | Correct insufficient | Fallback | Mean active generation ms | Mean answerable wall ms | Unknown token-usage cases |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Qwen | 6 | 1/3 | 2 | 1 | 0 | 3 | 3 | 112435.0 | 197793.9 | 2 |
+| Llama | 6 | 1/3 | 2 | 1 | 0 | 3 | 2 | 61069.0 | 180586.2 | 2 |
+| DeepSeek | 6 | 0/3 | 2 | 1 | 0 | 3 | 3 | unavailable | 4788.4 | 3 |
+
+All three final outputs have zero validator-detected unsupported accepted claims, largely because the unchanged V3 gate falls back or refuses. DeepSeek generated no parseable required schema in the answerable cases and fell back three times; this is a prompt/structured-output failure under this 128-token protocol, not proof of a generally weak model. Llama had one grounded incomplete answer and two fallbacks. The new Qwen run suffered local resource contention and had three fallbacks, whereas the earlier accepted Qwen 3B replay had two. These runs are not enough to select a new production generator or replace the accepted demo model.
+
+DeepSeek's gateway JSON parser returned no usage object, so its gateway input/output token cells are blank. The local llama-server log records 4228 prompt-evaluation and 768 output-evaluation tokens over 6 completed attempts (including retries); these separate log counters are in `llm_comparison.csv` and must not be compared as if they were successful-response usage totals.
+
+The validator checks schema, citations, topic, and clause support; zero validator-detected unsupported accepted is a narrow safety result, not proof of zero hallucinations. Latency includes local hardware contention. Active generation latency excludes failed/timed-out attempts; the separate `FEASIBILITY.csv` uses answerable-case wall time when no completed generation latency exists and labels that substitution. GPU memory is a system sample, not this process's allocated VRAM. Input/output token totals come from responses with runtime usage metadata; timed-out attempts have unknown token usage and therefore the sums can be lower bounds. Private case-level telemetry and answer hashes are stored under `state/task2_llm_benchmark/`; answers are not copied into Git. Model weights under `models/task2_llm/` remain Git-ignored.

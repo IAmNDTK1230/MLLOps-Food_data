@@ -1,0 +1,15 @@
+{
+  "evidence_packets_sha256": "8b0c3f2b5e8f282bf5d860924604b579244a2d96304e51b088083f792ea10183",
+  "prompt": "prompts/rag/rag_v3.txt",
+  "prompt_sha256": "81e19ef10f7879ac67e4b8b9085e99ddb0ce89b27a35e75be62538628d1da912",
+  "temperature": 0,
+  "seed": 42,
+  "max_new_tokens": 128,
+  "runtime": "llama.cpp b11429",
+  "runtime_executable": "C:\\Users\\ASUS\\hoc code\\vsc (python)\\MLOP_soopi\\shopee-data-mlops-platform\\.qwen-runtime\\b11429\\llama-server.exe",
+  "gpu_layers_requested": 99,
+  "threads": 8,
+  "context_size": 2048,
+  "retrieval_reexecuted": false,
+  "accepted_demo_modified": false
+}

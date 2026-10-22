@@ -1,0 +1,1 @@
+The 32,457 Foody reviews contain 3,750,416 untruncated MiniLM content tokens and 4,105,360 Qwen2.5 content tokens. These are separate tokenizer vocabularies and must not be added as one billable total.

@@ -1,0 +1,11 @@
+component,task,model_size_mb,mean_latency_ms,p95_latency_ms,peak_ram_bytes,peak_system_gpu_memory_mib,hardware,deployment_status
+Rule-based,single text sentiment,0,0.02379842164599774,0.04847999999999997,,,local CPU,accepted frozen baseline
+TF-IDF sentiment,single text sentiment,0.342442,0.36518647125140924,0.4171699999999998,,,local CPU,accepted frozen baseline
+Aspect TF-IDF,multi-label aspect,,,,,,local CPU,accepted artifact; latency/size unavailable in saved metrics
+Qwen 1.5B,RAG V3 active generation,1117.320736,1580.1401333349834,,1502134272,1301.0,RTX 3060 Laptop / local,accepted RAG V3 replay
+Qwen 3B,RAG V3 active generation,2104.932768,1498.3822333318433,,2473472000,2226.0,RTX 3060 Laptop / local,accepted RAG V3 replay
+Qwen research replay,fixed RAG V3 generation,2104.932768,112434.98069999805,112434.98069999805,1935290368,5755.0,RTX 3060 Laptop / local,research replay
+Llama research replay,fixed RAG V3 generation,2019.377696,61069.00499999938,61069.00499999938,2820562944,5797.0,RTX 3060 Laptop / local,research replay
+DeepSeek research replay,fixed RAG V3 generation,1117.3208,4788.397000000259,4822.688099999414,1499504640,4738.0,RTX 3060 Laptop / local,research replay; latency includes timeouts
+MiniLM dense retrieval,top-k retrieval,235.052644,16.519116666586342,21.181624999371707,,,local CPU/ONNX,accepted index; six-query latency
+RAG V3 end-to-end,six-case routed RAG,,870.3690666667777,1836.4727500002118,,,local RTX 3060 Laptop,accepted six-case replay

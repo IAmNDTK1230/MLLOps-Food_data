@@ -1,0 +1,23 @@
+source,category,count,denominator,percent,measurement
+rule,negative → neutral,179,887,20.180383314543406,exact test confusion
+rule,negative → positive,29,887,3.269447576099211,exact test confusion
+rule,neutral → positive,3,887,0.3382187147688839,exact test confusion
+rule,positive → negative,13,887,1.4656144306651635,exact test confusion
+rule,positive → neutral,215,887,24.23900789177001,exact test confusion
+tfidf,negative → neutral,9,887,1.0146561443066517,exact test confusion
+tfidf,negative → positive,47,887,5.2987598647125145,exact test confusion
+tfidf,neutral → negative,10,887,1.1273957158962795,exact test confusion
+tfidf,neutral → positive,14,887,1.5783540022547915,exact test confusion
+tfidf,positive → negative,68,887,7.666290868094701,exact test confusion
+tfidf,positive → neutral,21,887,2.367531003382187,exact test confusion
+Qwen V1,sarcasm_gold,9,37,24.324324324324326,pattern subset; lexical proxies where named
+Qwen V1,mixed_marker_proxy,45,121,37.1900826446281,pattern subset; lexical proxies where named
+Qwen V1,negation_marker_proxy,42,208,20.192307692307693,pattern subset; lexical proxies where named
+Qwen V1,no_obvious_polarity_word_proxy,200,630,31.746031746031743,pattern subset; lexical proxies where named
+Qwen V1,neutral_gold,14,43,32.55813953488372,pattern subset; lexical proxies where named
+Qwen V1,long_text_200plus_chars,0,20,0.0,pattern subset; lexical proxies where named
+Qwen V1,short_text_20orless_chars,33,93,35.483870967741936,pattern subset; lexical proxies where named
+Qwen V1,conflicting_gold_text,16,24,66.66666666666666,pattern subset; lexical proxies where named
+RAG V3 qwen_1_5b,unsupported_clause,2,6,33.333333333333336,rejected attempts; may repeat per question
+RAG V3 qwen_1_5b,topic_mismatch,4,6,66.66666666666667,rejected attempts; may repeat per question
+RAG V3 qwen_3b,unsupported_clause,5,5,100.0,rejected attempts; may repeat per question

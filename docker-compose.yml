@@ -74,8 +74,14 @@ services:
   qwen:
     image: ghcr.io/ggml-org/llama.cpp:server
     command: >-
-      -m /models/qwen_v1/qwen2.5-1.5b-instruct-q4_k_m.gguf
+      -m ${QWEN_MODEL_FILE:-/models/qwen_v3/qwen2.5-3b-instruct-q4_k_m.gguf}
       --host 0.0.0.0 --port 8193 --ctx-size 2048 --n-gpu-layers 99
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8193/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
     ports: ["8193:8193"]
     volumes:
       - ./models:/models:ro

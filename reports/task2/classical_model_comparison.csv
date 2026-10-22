@@ -1,0 +1,4 @@
+model,status,selected_c,accuracy,macro_f1,weighted_f1
+Rule-based,frozen_baseline,,0.5050732807215332,0.4312787685745347,0.5922975038911227
+TF-IDF + Logistic Regression,frozen_baseline,2.0,0.8094701240135288,0.6828540656101453,0.8121038305827353
+TF-IDF + LinearSVC,extra_exploratory_comparison,0.5,0.818489289740699,0.6672098350839368,0.8148303089155189
