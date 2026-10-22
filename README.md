@@ -1,4 +1,4 @@
-# shopee-data-mlops-platform
+# Food Review Intelligence Platform
 
 ## Quick Demo (Windows, frozen RAG V3)
 
