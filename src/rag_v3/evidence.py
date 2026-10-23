@@ -18,8 +18,14 @@ class Packet:
     support_gate_status: str
 
     def generation_payload(self, question):
+        # The model cites stable E-refs. Opaque review IDs stay in this packet
+        # for validation and the UI, but are not needed in the LLM prompt.
+        generation_evidence = [
+            {key: value for key, value in item.items() if key != "review_id"}
+            for item in self.evidence
+        ]
         return {"question": question, "question_intent": self.question_intent,
-                "restaurant": self.restaurant, "evidence": list(self.evidence),
+                "restaurant": self.restaurant, "evidence": generation_evidence,
                 "aggregates": self.aggregates}
 
 
@@ -99,8 +105,11 @@ def validate_packet_citations(answer, refs, packet, hits, route, question):
     if not inline or set(inline) != set(refs):
         raise ValueError("Answer and citation list disagree")
     cited = evidence_for_refs(packet, list(dict.fromkeys(inline)), hits)
+    answer_aspect_terms = ASPECT_TERMS[route.aspect] if route.aspect else ()
+    if route.aspect == "food":
+        answer_aspect_terms += ("phần ăn", "khẩu phần")
     if route.aspect and not any(term in answer.casefold()
-                                for term in ASPECT_TERMS[route.aspect]):
+                                for term in answer_aspect_terms):
         raise ValueError("Answer does not address requested aspect")
     if route.intent == "praise":
         if (not any(term in answer.casefold() for term in POSITIVE)
@@ -116,14 +125,20 @@ def validate_packet_citations(answer, refs, packet, hits, route, question):
         "nhân viên", "phục vụ", "không gian", "chỗ ngồi",
     )):
         raise ValueError("Answer adds off-topic restaurant facts")
-    if re.search(r"\bnhiều\b|đa số|thường xuyên|phổ biến|chủ yếu", answer,
-                 flags=re.IGNORECASE) and not packet.aggregates["frequency_supported"]:
+    # "phần ăn nhiều" describes a portion, not the prevalence of an opinion.
+    frequency_claim = re.search(
+        r"đa số|phần lớn|thường xuyên|phổ biến|chủ yếu|nhiều nhất|"
+        r"\bnhiều\s+(?:khách|người|review|đánh giá|phản hồi)",
+        answer, flags=re.IGNORECASE,
+    )
+    if frequency_claim and not packet.aggregates["frequency_supported"]:
         raise ValueError("Unsupported frequency claim")
-    if len(cited) == 1 and re.search(r"một số khách|nhiều khách|một số đánh giá",
-                                     answer, flags=re.IGNORECASE):
-        raise ValueError("Plural-review claim has only one cited review")
+    if re.search(r"nguyên nhân|dẫn đến|khiến|\bvì\b.{0,60}\bnên\b", answer,
+                 flags=re.IGNORECASE):
+        raise ValueError("Unsupported causal claim")
     if packet.aggregates["mixed_sentiment"] and route.intent == "general" and not re.search(
-        r"trái chiều|khác nhau|có người khen.*có người chê|vừa khen.*vừa chê",
+        r"trái chiều|khác nhau|có người khen.*có người chê|vừa khen.*vừa chê|"
+        r"tuy nhiên|trong khi",
         answer, flags=re.IGNORECASE,
     ):
         raise ValueError("Mixed evidence requires a mixed answer")
@@ -139,7 +154,9 @@ def validate_packet_citations(answer, refs, packet, hits, route, question):
             raise ValueError("Cited review misses requested issue")
     ignored = {"khách", "đánh", "giá", "quán", "một", "các", "về", "được",
                "trong", "những", "điều", "này", "rất", "cho", "với", "nhân", "viên",
-               "nói", "rằng", "của", "theo", "còn", "tuy", "nhiên", "số"}
+               "nói", "rằng", "của", "theo", "còn", "tuy", "nhiên", "số",
+               "review", "truy", "xuất", "hiện", "bằng", "chứng", "liên",
+               "quan", "thấy", "nhận", "xét"}
     ignored.update({"đồ", "ăn", "món", "không", "và", "khi", "nên", "đều",
                     "chất", "lượng", "cần", "phải"})
     by_ref = {item["ref"]: item for item in packet.evidence}
@@ -151,6 +168,10 @@ def validate_packet_citations(answer, refs, packet, hits, route, question):
             if re.search(r"[^\W_]{3,}", sentence):
                 raise ValueError("Answer clause lacks its own citation")
             continue
+        if (re.search(r"một số khách|một số (?:review|đánh giá|phản hồi)",
+                      sentence, flags=re.IGNORECASE)
+                and len(set(sentence_refs)) < 2):
+            raise ValueError("Plural-review claim has only one cited review")
         for clause in re.split(r",|\bnhưng\b|\btuy nhiên\b|\bvà\b", sentence):
             clean = re.sub(r"\[E\d+\]", "", clause).strip(" .!?")
             terms = set(re.findall(r"[^\W_]{3,}", clean.casefold())) - ignored
@@ -183,8 +204,16 @@ def _clause_supported(clause, item, terms, ignored):
     # available verbatim through the extractive fallback.
     if re.search(r"\d", claim):
         return False
+    if (re.search(r"nhân viên.{0,30}(?:chờ|đợi)", claim)
+            and not re.search(r"nhân viên.{0,30}(?:chờ|đợi)", source)):
+        return False
     source_terms = set(re.findall(r"[^\W_]{3,}", source)) - ignored
-    if len(terms & source_terms) < min(2, len(terms)):
+    overlap = len(terms & source_terms)
+    # A bounded paraphrase of an explicit taste statement: "nêm nếm rất vừa"
+    # can support "vừa miệng". Keep all other claims on the lexical gate.
+    taste_paraphrase = ("vừa miệng" in claim
+                        and "nêm nếm rất vừa" in source and overlap >= 1)
+    if overlap < min(2, len(terms)) and not taste_paraphrase:
         return False
     for issue, cues in _ISSUE_CUES.items():
         if any(cue in claim for cue in cues):

@@ -1,0 +1,315 @@
+{
+  "measured_at_utc": "2026-10-23T06:09:09.228789+00:00",
+  "warehouse": {
+    "status": "PASS",
+    "tables": {
+      "dim_restaurant": 2110,
+      "dim_date": 4029,
+      "fact_review": 32465,
+      "fact_restaurant_daily": 27994,
+      "fact_restaurant_monthly": 16603,
+      "fact_aspect": 6010,
+      "fact_issue": 1758,
+      "fact_review_events": 20
+    },
+    "schema_migrations": [
+      {
+        "version": "001",
+        "filename": "001_init.sql"
+      },
+      {
+        "version": "002",
+        "filename": "002_indexes.sql"
+      }
+    ],
+    "source_observations": 33946,
+    "distinct_review_ids": 32465,
+    "rag_index_documents": 32457,
+    "counting_note": "8 distinct review IDs have no AI prediction and are not indexed by RAG",
+    "second_load_same_counts": true,
+    "second_load_new_migrations": [],
+    "sql_examples": {
+      "top_restaurants": [
+        {
+          "restaurant": "Hanuri - Quán Ăn Hàn Quốc - Nguyễn Đình Chiểu",
+          "reviews": 133
+        },
+        {
+          "restaurant": "Phở Lệ - Võ Văn Tần",
+          "reviews": 124
+        },
+        {
+          "restaurant": "Yến Hương Giang - Bún Bò Huế",
+          "reviews": 109
+        }
+      ],
+      "sentiment_distribution": [
+        {
+          "sentiment": "positive",
+          "reviews": 20985
+        },
+        {
+          "sentiment": "negative",
+          "reviews": 10813
+        },
+        {
+          "sentiment": "neutral",
+          "reviews": 659
+        },
+        {
+          "sentiment": null,
+          "reviews": 8
+        }
+      ],
+      "top_aspects": [
+        {
+          "aspect": "food",
+          "predicted_reviews": 19872
+        },
+        {
+          "aspect": "service",
+          "predicted_reviews": 7683
+        },
+        {
+          "aspect": "price",
+          "predicted_reviews": 5022
+        }
+      ]
+    }
+  },
+  "kafka": {
+    "status": "PASS",
+    "image": "apache/kafka:3.9.1",
+    "mode": "single-node KRaft",
+    "topic": "foody.review.events",
+    "event_schema_version": "1.0",
+    "first_send": 20,
+    "replay_send": 20,
+    "metrics": {
+      "foody_kafka_events_consumed_total": 40.0,
+      "foody_kafka_events_inserted_total": 20.0,
+      "foody_kafka_events_duplicate_total": 20.0,
+      "foody_kafka_events_failed_total": 0.0
+    },
+    "unique_warehouse_events": 20,
+    "retention_hours": 6,
+    "retention_bytes": 134217728,
+    "logical_volume_mb": 25.23,
+    "idempotent": true
+  },
+  "prometheus": {
+    "status": "PASS",
+    "image": "prom/prometheus:v3.5.5",
+    "health_http": 200,
+    "retention_time": "6h",
+    "retention_size": "256MB",
+    "metrics": {
+      "foody_api_requests_total": 46.0,
+      "foody_rag_requests_total": 1.0,
+      "foody_rag_generation_mode_total": 1.0,
+      "foody_rag_retrieval_route_total": 1.0,
+      "foody_llm_input_tokens_total": 1266.0,
+      "foody_llm_output_tokens_total": 177.0,
+      "foody_kafka_events_consumed_total": 40.0,
+      "foody_kafka_events_inserted_total": 20.0,
+      "foody_kafka_events_duplicate_total": 20.0,
+      "foody_kafka_events_failed_total": 0.0,
+      "api_up": 1.0,
+      "consumer_up": 1.0
+    }
+  },
+  "grafana": {
+    "status": "PASS",
+    "image": "grafana/grafana:12.2.9",
+    "health_http": 200,
+    "datasource_status": "OK",
+    "dashboard_uid": "foody-review2",
+    "dashboard_title": "Foody DevOps & LLMOps",
+    "panel_query_values": {
+      "API requests/min": [
+        4.000140355801959
+      ],
+      "API error rate": [
+        0.0
+      ],
+      "API latency P95": [
+        0.0052499999999999925
+      ],
+      "RAG requests": [
+        1.0
+      ],
+      "RAG generation modes": [
+        1.0
+      ],
+      "Retrieval routes": [
+        1.0
+      ],
+      "LLM latency P95": [
+        null
+      ],
+      "LLM input/output tokens": [
+        1266.0,
+        177.0
+      ],
+      "Kafka consumed": [
+        40.0
+      ],
+      "Kafka failures": [
+        0.0
+      ]
+    },
+    "panel_note": "9 of 10 panels returned numeric values at final check; rolling LLM latency P95 had insufficient samples in its 5-minute rate window."
+  },
+  "terraform": {
+    "status": "PASS",
+    "version": "1.16.6",
+    "provider": "kreuzwerker/docker 4.6.0",
+    "fmt": "PASS",
+    "init": "PASS",
+    "validate": "PASS",
+    "initial_plan": {
+      "add": 5,
+      "change": 0,
+      "destroy": 0
+    },
+    "final_plan": "no changes",
+    "applied": true
+  },
+  "network": {
+    "name": "foody_devops_network",
+    "named_volumes": [
+      "foody_postgres_data",
+      "foody_kafka_data",
+      "foody_prometheus_data",
+      "foody_grafana_data"
+    ],
+    "ports": {
+      "streamlit": 8501,
+      "backend": 8000,
+      "qwen": 8193,
+      "grafana_localhost": 3000,
+      "prometheus_localhost": 9090,
+      "kafka_localhost": 9092,
+      "postgres_localhost": 5433
+    }
+  },
+  "versioning": {
+    "endpoint": "/version",
+    "response": {
+      "project_version": "0.2.0-review2",
+      "git_sha": "4229a8b3998392c97f4b7a8c9e3795830285dbce",
+      "warehouse_schema_version": "002",
+      "event_schema_version": "1.0",
+      "rag_version": "RAG_V3",
+      "prompt_id": "rag_v3:bea35996ad45",
+      "sentiment_sha256": "212f4c36ca6f5e54f34401048689545606b20033828db95b02db7636107f85b6",
+      "aspect_sha256": "6177f927d2747dcbdde9c7dfa10b94f4a9e5fb128ce9cbbc06d852dd992ac715",
+      "dataset_sha256": "ba53d3f654bfa51532e8e508547032395ca29efe78e4948e78bf73ce003306e9",
+      "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "embedding_revision": "faf4aa4225822f3bc6376869cb1164e8e3feedd0",
+      "embedding_sha256": "634d0f66c29dc934c8fa72b8a4fe91dd4d420a22f1d82a241058d4316e659a99",
+      "qwen_model": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+      "qwen_revision": "cc1e68eea5f05f88f41a6de1fc73110178f23715",
+      "qwen_sha256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d"
+    }
+  },
+  "ci_cd": {
+    "new_changes_pushed": false,
+    "current_turn_actions_run": "not verified on GitHub; local workflow/config checks only",
+    "cd_scope": "versioned image publication to GHCR; no remote production deployment"
+  },
+  "storage": {
+    "docker_before": {
+      "Images": "10.62GB",
+      "Containers": "245.3MB",
+      "Local Volumes": "67.91MB",
+      "Build Cache": "12.67GB"
+    },
+    "docker_after": {
+      "Images": "13.03GB",
+      "Containers": "246.6MB",
+      "Local Volumes": "289MB",
+      "Build Cache": "12.76GB"
+    },
+    "kafka_volume": "25.23MB logical (docker system df -v)",
+    "new_source_config_bytes_excluding_acceptance_json": 55269,
+    "docker_prune_run": false
+  },
+  "tests": {
+    "pytest": "305 passed, 1 dependency deprecation warning",
+    "ruff": "PASS",
+    "compileall": "PASS",
+    "compose_base": "PASS",
+    "compose_devops": "PASS",
+    "demo_preflight": "PASS 9/9",
+    "health_http": {
+      "qwen": 200,
+      "backend": 200,
+      "metrics": 200,
+      "streamlit": 200,
+      "prometheus": 200,
+      "grafana": 200
+    },
+    "one_command_start": "PASS"
+  },
+  "streamlit_rag_monitoring_followup": {
+    "verified_at_utc": "2026-10-23T09:14:40Z",
+    "ui_path": "Streamlit AI Review Analyst -> answer_question_v3",
+    "real_ui_requests": 3,
+    "prometheus_streamlit_target_up": 1,
+    "prometheus_metrics": {
+      "foody_rag_requests_total": 3,
+      "generation_modes": {
+        "extractive_fallback": 1,
+        "qwen": 1,
+        "none": 1
+      },
+      "retrieval_routes": {
+        "SERVICE_COMPLAINT": 1,
+        "GENERAL_ASPECT": 1,
+        "PRICE_COMPLAINT": 1
+      },
+      "foody_rag_evidence_count_sum": 3,
+      "foody_llm_latency_seconds_sum": 49.544469373000084,
+      "foody_llm_input_tokens_total": 2273,
+      "foody_llm_output_tokens_total": 231
+    },
+    "grafana_rag_requests_panel": "PASS: visible line rises from 1 to 3; no No data",
+    "sqlite_llmops_event_ids": [485, 487, 488],
+    "sqlite_llmops_input_tokens_total": 2273,
+    "sqlite_llmops_output_tokens_total": 231,
+    "no_double_counting": true,
+    "checks": {
+      "focused_monitoring_tests": "5 passed",
+      "ruff": "PASS",
+      "compileall": "PASS",
+      "compose_config": "PASS",
+      "demo_preflight": "PASS 9/9",
+      "full_pytest": "305 passed, 1 dependency deprecation warning (run with local Windows socket access)"
+    }
+  },
+  "post_restart_validation": {
+    "verified_at_utc": "2026-10-23T12:20:59Z",
+    "docker_desktop_recovered": true,
+    "service_health": "8 of 8 requested services running; all configured healthchecks healthy",
+    "prometheus_targets": {
+      "foody-api": "up",
+      "foody-kafka-consumer": "up",
+      "foody-streamlit": "up"
+    },
+    "retained_six_hour_metrics": {
+      "streamlit_rag_requests": 3,
+      "generation_mode_events": 3,
+      "retrieval_route_events": 3,
+      "llm_latency_observations": 2,
+      "input_tokens": 2273,
+      "output_tokens": 231
+    },
+    "grafana_last_six_hours": "RAG requests, generation mode, route, token, API, and Kafka panels show retained data",
+    "note": "In-process counters reset when Streamlit restarted; no new Qwen requests were sent."
+  },
+  "limitations": [
+    "New CI changes are not pushed, so no new GitHub Actions run is claimed.",
+    "One-node local Kafka/PostgreSQL/Prometheus/Grafana demo is not HA or remote production."
+  ]
+}

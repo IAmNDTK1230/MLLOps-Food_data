@@ -49,6 +49,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate Docker Compose
-        run: docker compose config --quiet
+        run: |
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.devops.yml config --quiet
+      - name: Validate Grafana dashboard and SQL migrations
+        run: |
+          python -m json.tool devops/grafana/dashboards/foody-devops.json > /dev/null
+          test -f warehouse/migrations/001_init.sql
+          test -f warehouse/migrations/002_indexes.sql
       - name: Build artifact-free Streamlit image
         run: docker build --file Dockerfile.rag --tag food-review-intelligence:ci .
+
+  terraform:
+    name: Terraform formatting and validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.16.6'
+      - name: Terraform format
+        run: terraform -chdir=infra/terraform fmt -check
+      - name: Terraform init
+        run: terraform -chdir=infra/terraform init -backend=false -input=false
+      - name: Terraform validate
+        run: terraform -chdir=infra/terraform validate

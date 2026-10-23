@@ -29,6 +29,12 @@ mlartifacts
 # RAG models and source data are mounted at runtime; never bake weights or reviews.
 models
 .qwen-runtime
+release
+tmp
+.terraform
+*.tfstate
+*.tfstate.*
+*.docx
 data
 state
 logs

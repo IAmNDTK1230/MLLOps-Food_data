@@ -1,0 +1,11 @@
+ARG BASE_IMAGE=shopee-data-mlops-platform-rag-backend:latest
+FROM ${BASE_IMAGE}
+WORKDIR /app
+COPY requirements-devops.txt ./
+RUN pip install --no-cache-dir -r requirements-devops.txt
+COPY app ./app
+COPY src ./src
+COPY config ./config
+COPY prompts ./prompts
+COPY warehouse ./warehouse
+COPY qwen_v1.yaml qwen_v3_3b.yaml ./

@@ -1,10 +1,13 @@
 """Four-page Streamlit demo with lazy, visible RAG/Qwen degradation."""
 
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+
+from src.monitoring.metrics import observe_rag, start_streamlit_metrics
 
 
 @st.cache_data(show_spinner=False)
@@ -152,41 +155,51 @@ def analyst_page():
             from src.rag.schemas import RetrievalRequest
             from src.rag_v3.cli import selected_v3_gateway
             from src.rag_v3.retriever import RoutedRetriever
-            from src.rag_v3.service import answer_question_v3
+            from src.rag_v3.service import answer_question_v3, generation_mode_label
 
             with st.spinner("Retrieving reviews and generating an evidence-linked answer..."):
                 with selected_v3_gateway() as gateway:
-                    answer, hits, telemetry, _, _ = answer_question_v3(
+                    answer, hits, telemetry, debug, packet = answer_question_v3(
                         RoutedRetriever(), gateway,
                         RetrievalRequest(query=question, restaurant_key=key, top_k=5),
                     )
-            st.subheader("Answer")
+            observe_rag(telemetry)
+            st.subheader("AI Analysis")
             st.write(answer.answer if answer.generation_mode != "none" else
                      "Không đủ bằng chứng để kết luận.")
-            st.caption("Generation mode: " + ("Qwen synthesis" if
-                       answer.generation_mode == "qwen" else
-                       "Evidence-based fallback" if
-                       answer.generation_mode == "extractive_fallback" else
-                       "Insufficient evidence"))
-            st.caption(f"Model: {answer.model}; prompt: {answer.prompt_version}; "
-                       f"retrieval: {telemetry['retrieval_method']}")
-            st.subheader("Claims and linked review IDs")
-            for claim in answer.claims:
-                st.write(claim.claim)
-                st.write(claim.evidence_review_ids)
-            st.write("Evidence IDs", [item.review_id for item in answer.evidence])
-            with st.expander("Supporting review evidence"):
-                cited = {item.review_id for item in answer.evidence}
-                for hit in hits:
-                    if hit.review_id not in cited:
-                        continue
-                    st.markdown(f"**{hit.restaurant_name}** · score {hit.score:.3f} · `{hit.review_id}`")
-                    st.write(hit.text)
-                    st.caption(f"Rating: {hit.metadata.get('raw_rating')}; "
-                               f"predicted sentiment: {hit.metadata.get('predicted_sentiment')}; "
-                               f"predicted aspects: {hit.metadata.get('predicted_aspects')}")
-            st.caption(f"{len(answer.evidence)} cited review(s) from {len(hits)} retrieved")
-            st.caption(f"Retrieval {telemetry['retrieval_latency_ms']:.1f} ms")
+            st.caption(f"Generation mode: {generation_mode_label(answer.generation_mode)}"
+                       f" · Retrieval: {telemetry['retrieval_method']}"
+                       f" · Model: {answer.model}")
+            st.caption("Analysis is limited to the retrieved reviews; it does not "
+                       "represent every customer.")
+            st.subheader("Evidence used")
+            cited_ids = {item.review_id for item in answer.evidence}
+            for item in packet.evidence:
+                if item["review_id"] not in cited_ids:
+                    continue
+                st.markdown(f"**Evidence {item['ref']}**")
+                st.caption(f"Sentiment: {item['sentiment'] or 'N/A'} · "
+                           f"Aspects: {', '.join(item['aspects']) or 'N/A'} · "
+                           f"Rating: {item['rating'] or 'N/A'}")
+                st.write(item["text"])
+            if not cited_ids:
+                st.info("No review evidence was accepted for this question.")
+            with st.expander("Technical details"):
+                st.write("Review IDs", [item.review_id for item in answer.evidence])
+                st.write("Claim mappings", [claim.model_dump() for claim in answer.claims])
+                st.write("Evidence ref → review ID", {
+                    item["ref"]: item["review_id"] for item in packet.evidence
+                })
+                st.json({"prompt_version": answer.prompt_version,
+                         "generation_mode": answer.generation_mode,
+                         "retrieval_method": telemetry["retrieval_method"],
+                         "support_gate_status": packet.support_gate_status,
+                         "clause_support_status": telemetry["clause_support_status"],
+                         "generation_attempts": telemetry["generation_attempts"],
+                         "failure_category": telemetry["failure_category"],
+                         "retrieval_debug": debug})
+                st.caption(f"{len(answer.evidence)} cited of {len(hits)} retrieved · "
+                           f"retrieval {telemetry['retrieval_latency_ms']:.1f} ms")
         except Exception as error:
             st.warning(f"RAG unavailable ({type(error).__name__}). Build the index or start Qwen.")
 
@@ -259,6 +272,8 @@ def monitor_page():
 
 def main():
     st.set_page_config(page_title="Food Review Intelligence", layout="wide")
+    if metrics_port := os.getenv("FOODY_STREAMLIT_METRICS_PORT"):
+        start_streamlit_metrics(metrics_port)
     page = st.sidebar.radio("Page", ["Restaurant Intelligence", "Review Explorer",
                                      "AI Review Analyst", "LLMOps Monitor"])
     {"Restaurant Intelligence": restaurant_page,

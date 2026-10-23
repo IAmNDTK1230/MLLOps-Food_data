@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: Foody Review 2
+    orgId: 1
+    folder: Foody
+    type: file
+    disableDeletion: true
+    options:
+      path: /var/lib/grafana/dashboards

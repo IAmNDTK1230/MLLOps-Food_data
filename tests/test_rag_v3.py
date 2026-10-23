@@ -13,7 +13,12 @@ from src.rag.service import INSUFFICIENT
 from src.rag_v3.evidence import build_packet, validate_packet_citations
 from src.rag_v3.health import health_report_v3
 from src.rag_v3.routing import route_query
-from src.rag_v3.service import V3Draft, answer_question_v3, attach_citation
+from src.rag_v3.service import (
+    V3Draft,
+    answer_question_v3,
+    attach_citation,
+    generation_mode_label,
+)
 
 
 def hit(review_id, text, sentiment="negative", aspects=("service",)):
@@ -54,6 +59,23 @@ class FakeGateway:
                              "output_tokens": 10}
 
 
+class SequenceGateway(FakeGateway):
+    def __init__(self, outputs):
+        super().__init__()
+        self.outputs = outputs
+        self.requests = []
+
+    def generate(self, **kwargs):
+        self.calls += 1
+        self.requests.append(kwargs)
+        value = self.outputs[self.calls - 1]
+        if isinstance(value, Exception):
+            kwargs["audit_sink"].append({"raw_output": "{invalid-json"})
+            raise value
+        return value, {"latency_ms": 1.0, "input_tokens": 12,
+                       "output_tokens": 10}
+
+
 @pytest.fixture(autouse=True)
 def no_operational_log(monkeypatch):
     monkeypatch.setattr("src.rag_v3.service.record", lambda *args, **kwargs: None)
@@ -81,6 +103,175 @@ def test_packet_deduplicates_and_does_not_grant_frequency():
     assert packet.aggregates == {"accepted_review_count": 1,
                                  "mixed_sentiment": False,
                                  "frequency_supported": False}
+    assert "review_id" not in packet.generation_payload(request.query)["evidence"][0]
+
+
+def test_multi_evidence_synthesis_maps_atomic_claims_to_real_reviews():
+    reviews = [
+        hit("slow", "Nhân viên phục vụ chậm, khách phải chờ lâu"),
+        hit("rude", "Nhân viên có thái độ tệ và nói chuyện khó chịu"),
+    ]
+    gateway = SequenceGateway([{
+        "claims": [
+            {"text": "Nhân viên phục vụ chậm", "evidence_refs": ["E1"]},
+            {"text": "Nhân viên có thái độ tệ", "evidence_refs": ["E2"]},
+        ],
+        "insufficient_evidence": False,
+    }])
+    response, _, telemetry, _, packet = answer_question_v3(
+        FakeRetriever(reviews), gateway,
+        RetrievalRequest(query="Nhân viên phục vụ có vấn đề gì không?"),
+    )
+    assert response.generation_mode == "qwen"
+    assert telemetry["generation_attempts"] == 1
+    assert [item.review_id for item in response.evidence] == ["slow", "rude"]
+    assert [claim.evidence_review_ids for claim in response.claims] == [
+        ["slow"], ["rude"],
+    ]
+    assert packet.evidence[0]["ref"] == "E1"
+
+
+def test_repair_receives_rejected_answer_and_failure_reason():
+    review = hit("slow", "Nhân viên phục vụ chậm, khách phải chờ lâu")
+    rejected = "Nhiều khách phàn nàn nhân viên phục vụ chậm [E1]."
+    gateway = SequenceGateway([
+        {"claims": [{"text": "Nhiều khách phàn nàn nhân viên phục vụ chậm",
+                     "evidence_refs": ["E1"]}], "insufficient_evidence": False},
+        {"claims": [{"text": "Nhân viên phục vụ chậm",
+                     "evidence_refs": ["E1"]}], "insufficient_evidence": False},
+    ])
+    response, _, telemetry, _, _ = answer_question_v3(
+        FakeRetriever([review]), gateway,
+        RetrievalRequest(query="Nhân viên phục vụ có vấn đề gì không?"),
+    )
+    assert response.generation_mode == "qwen"
+    assert telemetry["generation_attempts"] == 2
+    repair = json.loads(gateway.requests[1]["user"])["repair"]
+    assert repair["rejected_answer"] == rejected
+    assert repair["validation_failure"] == "Unsupported frequency claim"
+
+
+def test_invalid_json_retry_receives_raw_rejected_output():
+    review = hit("slow", "Nhân viên phục vụ chậm")
+    gateway = SequenceGateway([
+        ValueError("Invalid JSON"),
+        {"claims": [{"text": "Nhân viên phục vụ chậm",
+                     "evidence_refs": ["E1"]}], "insufficient_evidence": False},
+    ])
+    response, _, telemetry, _, _ = answer_question_v3(
+        FakeRetriever([review]), gateway,
+        RetrievalRequest(query="Nhân viên phục vụ có vấn đề gì không?"),
+    )
+    assert response.generation_mode == "qwen"
+    assert telemetry["generation_attempts"] == 2
+    repair = json.loads(gateway.requests[1]["user"])["repair"]
+    assert repair == {"rejected_answer": "{invalid-json",
+                      "validation_failure": "Invalid JSON"}
+
+
+def test_two_rejected_attempts_still_use_verified_extractive_fallback():
+    review = hit("slow", "Nhân viên phục vụ chậm, khách phải chờ lâu")
+    bad = {"claims": [{"text": "Nhiều khách phàn nàn nhân viên phục vụ chậm",
+                       "evidence_refs": ["E1"]}], "insufficient_evidence": False}
+    gateway = SequenceGateway([bad, bad])
+    response, _, telemetry, _, _ = answer_question_v3(
+        FakeRetriever([review]), gateway,
+        RetrievalRequest(query="Nhân viên phục vụ có vấn đề gì không?"),
+    )
+    assert gateway.calls == 2
+    assert response.generation_mode == "extractive_fallback"
+    assert response.evidence[0].review_id == "slow"
+    assert telemetry["clause_support_status"] == "extractive_verified"
+
+
+def test_portion_size_word_nhieu_is_not_review_frequency():
+    food = hit("food", "Món ăn ngon, phần ăn khá nhiều", "positive", ("food",))
+    request = RetrievalRequest(query="Khách nói gì về chất lượng món ăn?")
+    route = route_query(request.query)
+    packet = build_packet(request, [food], route)
+    cited = validate_packet_citations(
+        "Phần ăn khá nhiều [E1].", ["E1"], packet, [food], route, request.query,
+    )
+    assert cited[0].review_id == "food"
+
+
+def test_explicitly_supported_taste_paraphrase_passes_but_invented_taste_fails():
+    food = hit("food", "Món ăn ngon đa dạng, nêm nếm rất vừa, vị thanh",
+               "positive", ("food",))
+    request = RetrievalRequest(query="Khách nói gì về chất lượng món ăn?")
+    route = route_query(request.query)
+    packet = build_packet(request, [food], route)
+    assert validate_packet_citations(
+        "Món ăn ngon đa dạng, vị vừa miệng [E1].", ["E1"],
+        packet, [food], route, request.query,
+    )[0].review_id == "food"
+    with pytest.raises(ValueError, match="clause"):
+        validate_packet_citations(
+            "Món ăn quá cay [E1].", ["E1"], packet, [food], route, request.query,
+        )
+
+
+def test_causal_claim_and_unsupported_review_frequency_stay_blocked():
+    review = hit("slow", "Nhân viên phục vụ chậm, khách phải chờ lâu")
+    request = RetrievalRequest(query="Nhân viên phục vụ có vấn đề gì không?")
+    route = route_query(request.query)
+    packet = build_packet(request, [review], route)
+    with pytest.raises(ValueError, match="causal"):
+        validate_packet_citations(
+            "Phục vụ chậm khiến đánh giá giảm [E1].", ["E1"],
+            packet, [review], route, request.query,
+        )
+    with pytest.raises(ValueError, match="frequency"):
+        validate_packet_citations(
+            "Đa số khách phàn nàn phục vụ chậm [E1].", ["E1"],
+            packet, [review], route, request.query,
+        )
+
+
+def test_waiting_customer_is_not_rewritten_as_waiting_staff():
+    review = hit("wait", "Khách thường phải chờ lâu; nhân viên phục vụ chậm")
+    request = RetrievalRequest(query="Nhân viên phục vụ có vấn đề gì không?")
+    route = route_query(request.query)
+    packet = build_packet(request, [review], route)
+    with pytest.raises(ValueError, match="clause"):
+        validate_packet_citations(
+            "Nhân viên phục vụ chậm, nhân viên thường phải chờ lâu [E1].", ["E1"],
+            packet, [review], route, request.query,
+        )
+
+
+def test_friendly_mode_mapping_keeps_internal_values():
+    assert generation_mode_label("qwen") == "AI synthesis"
+    assert generation_mode_label("extractive_fallback") == "Evidence fallback"
+    assert generation_mode_label("none") == "Insufficient evidence"
+
+
+def test_explicit_evidence_labels_are_converted_then_validated():
+    request = RetrievalRequest(query="Nhân viên phục vụ có vấn đề không?")
+    reviews = [hit("slow", "Nhân viên phục vụ chậm"),
+               hit("rude", "Nhân viên có thái độ tệ")]
+    packet = build_packet(request, reviews, route_query(request.query))
+    answer, refs = attach_citation(V3Draft(
+        answer="Nhận định ngắn E1: Nhân viên phục vụ chậm. "
+               "Nhận định khác E2: Nhân viên có thái độ tệ.",
+        evidence_review_ids=["E1", "E2"],
+    ), packet)
+    assert answer == "Nhân viên phục vụ chậm [E1]. Nhân viên có thái độ tệ [E2]."
+    assert refs == ["E1", "E2"]
+    assert len(validate_packet_citations(
+        answer, refs, packet, reviews, route_query(request.query), request.query,
+    )) == 2
+
+
+def test_uncited_multi_sentence_draft_is_not_auto_attributed_to_one_review():
+    request = RetrievalRequest(query="Nhân viên phục vụ có vấn đề không?")
+    packet = build_packet(request, [hit("slow", "Nhân viên phục vụ chậm")],
+                          route_query(request.query))
+    with pytest.raises(ValueError, match="Missing inline citations"):
+        attach_citation(V3Draft(
+            answer="Nhân viên phục vụ chậm. Khách phải chờ lâu.",
+            evidence_review_ids=["E1"],
+        ), packet)
 
 
 def test_late_complaint_is_preserved_verbatim_in_packet():

@@ -26,9 +26,9 @@ Trong sidebar chọn **Review Explorer**. Chỉ hai vùng **SOURCE** (review, ra
 
 ## 4:50–6:40 — AI Review Analyst và chứng cứ
 
-Trong sidebar chọn **AI Review Analyst**, giữ Hanuri. Hộp **Question** mặc định hỏi “Nhân viên phục vụ có vấn đề gì không?”; nhấn **Ask**. Đọc **Answer**, **Generation mode**, tên Qwen và phương pháp retrieval. Mở **Supporting review evidence**: chỉ review ID, trích văn bản, rating, predicted sentiment, aspects. “Khi nhãn là Qwen synthesis, câu được tạo đã đi qua bộ kiểm tra từng mệnh đề; khi nhãn là Evidence-based fallback, hệ thống trích dẫn đánh giá gốc vì bản tạo không đạt. Nhóm bọn em không giấu fallback.” Kết quả live có thể chuyển sang fallback; hãy đọc nhãn thực tế thay vì hứa trước một chế độ.
+Trong sidebar chọn **AI Review Analyst**, giữ Hanuri. Hộp **Question** mặc định hỏi “Nhân viên phục vụ có vấn đề gì không?”; nhấn **Ask**. Đọc **AI Analysis**, nhãn **Generation mode**, tên Qwen và phương pháp retrieval. Vùng **Evidence used** hiển thị E1/E2, sentiment, aspect, rating và đoạn review đã cung cấp cho Qwen. Review ID gốc, ánh xạ claim–review, prompt hash và trạng thái validator nằm trong **Technical details**. “Khi nhãn là AI synthesis, từng claim của Qwen có ref và đã qua kiểm tra hỗ trợ; khi nhãn là Evidence fallback, hệ thống trích đánh giá gốc vì hai lần tạo không đạt.” Câu phục vụ trong lượt nghiệm thu mới vẫn fallback do Qwen đưa khẳng định tần suất không có hỗ trợ; đọc đúng nhãn live thay vì hứa một chế độ.
 
-Thay câu hỏi thành “Khách nói gì về chất lượng món ăn?” và nhấn **Ask**; trong đánh giá cố định, trường hợp này có chứng cứ và trả lời bằng extractive fallback. Chỉ trích dẫn và nguồn. Nếu thời gian ngắn, bỏ lượt hỏi thứ hai và mở `RAG_V3_ACCEPTANCE_REPORT.md` để chứng minh chế độ fallback đã được đo.
+Thay câu hỏi thành “Khách nói gì về chất lượng món ăn?” và nhấn **Ask**. Lượt kiểm tra sản phẩm mới đã cho AI synthesis ngắn, trích [E1][E2] từ hai review; đây là kết quả demo riêng, không thay số trong benchmark RAG V3 đóng băng. Mở **Technical details** nếu cần giải thích ánh xạ E-ref sang review ID. Nếu kết quả live khác, đọc đúng nhãn thực tế và dùng `AI_ANALYST_SYNTHESIS_ACCEPTANCE.md` để trình bày lượt kiểm tra đã lưu.
 
 ## 6:40–7:30 — Từ chối đúng và nhân quả
 

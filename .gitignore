@@ -29,6 +29,9 @@ reports/**
 !reports/final/*.md
 !reports/final/*.json
 !reports/final/*.csv
+!reports/devops/
+!reports/devops/*.md
+!reports/devops/*.json
 !reports/task2/
 !reports/task2/figures/
 !reports/task2/*.md
@@ -36,7 +39,6 @@ reports/**
 !reports/task2/*.json
 !reports/task2/*.png
 !reports/task2/figures/*.png
-!reports/PHASE2_IMPLEMENTATION_REPORT.md
 !reports/README.md
 !reports/FOOD_ACCEPTANCE_REPORT.md
 !reports/BASELINE_ACCEPTANCE_REPORT.md
@@ -52,6 +54,12 @@ reports/**
 .dvc/config.local
 mlruns/
 mlartifacts/
+tmp/
+release/
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
 .env.*
 !.env.example
 

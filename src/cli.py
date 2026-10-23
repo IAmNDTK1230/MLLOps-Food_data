@@ -43,6 +43,9 @@ def main() -> int:
     )
     bootstrap.add_argument("--output", default="scripts/databricks_bootstrap.sql")
     commands.add_parser("demo-preflight", help="Read-only frozen demo artifact checks")
+    commands.add_parser("warehouse-load", help="Idempotently load frozen Foody marts")
+    replay = commands.add_parser("kafka-produce", help="Replay a bounded Foody event sample")
+    replay.add_argument("--limit", type=int, default=20)
     commands.add_parser("serve", help="Serve the configurable Prefect deployment")
     from src.ml.cli import add_commands, run_command
 
@@ -58,6 +61,14 @@ def main() -> int:
     rag_v2_cli.add_commands(commands)
     rag_v3_cli.add_commands(commands)
     args = parser.parse_args()
+    if args.command == "warehouse-load":
+        from src.warehouse.loader import main as warehouse_main
+
+        return warehouse_main()
+    if args.command == "kafka-produce":
+        from src.streaming.producer import main as producer_main
+
+        return producer_main(args.limit)
     if args.command == "demo-preflight":
         from src.demo import demo_preflight, print_preflight
 

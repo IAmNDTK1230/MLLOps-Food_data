@@ -1,0 +1,282 @@
+{
+  "uid": "foody-review2",
+  "title": "Foody DevOps & LLMOps",
+  "schemaVersion": 40,
+  "version": 1,
+  "refresh": "15s",
+  "timezone": "browser",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "API requests/min",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(foody_api_requests_total[5m])) * 60",
+          "legendFormat": "API requests/min"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "API error rate",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "(sum(rate(foody_api_requests_total{status=~\"5..\"}[5m])) or vector(0)) / clamp_min(sum(rate(foody_api_requests_total[5m])), 0.001)",
+          "legendFormat": "API error rate"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "API latency P95",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(foody_api_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "API latency P95"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "RAG requests",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(foody_rag_requests_total)",
+          "legendFormat": "RAG requests"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "RAG generation modes",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum by (generation_mode) (foody_rag_generation_mode_total)",
+          "legendFormat": "RAG generation modes"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Retrieval routes",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum by (route) (foody_rag_retrieval_route_total)",
+          "legendFormat": "Retrieval routes"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "LLM latency P95",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(foody_llm_latency_seconds_bucket[5m])))",
+          "legendFormat": "LLM latency P95"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "LLM input/output tokens",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(foody_llm_input_tokens_total)",
+          "legendFormat": "input"
+        },
+        {
+          "expr": "sum(foody_llm_output_tokens_total)",
+          "legendFormat": "output"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Kafka consumed",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(foody_kafka_events_consumed_total)",
+          "legendFormat": "Kafka consumed"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Kafka failures",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "foody-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(foody_kafka_events_failed_total)",
+          "legendFormat": "Kafka failures"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    }
+  ],
+  "tags": [
+    "foody",
+    "review2"
+  ]
+}

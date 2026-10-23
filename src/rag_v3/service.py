@@ -1,6 +1,7 @@
 """Evidence-first V3 answering; the generator may only phrase accepted facts."""
 
 import json
+import re
 from time import perf_counter
 
 import requests
@@ -22,6 +23,18 @@ class V3Draft(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     answer: str
     evidence_review_ids: list[str] = Field(default_factory=list)
+
+
+class V3AnalysisClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    text: str
+    evidence_refs: list[str]
+
+
+class V3AnalysisDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    claims: list[V3AnalysisClaim] = Field(max_length=3)
+    insufficient_evidence: bool = False
 
 
 class V3Claim(BaseModel):
@@ -50,18 +63,36 @@ def _as_evidence(hits):
 
 def attach_citation(draft, packet):
     """Choose a short evidence placeholder when Qwen omits the inline citation."""
-    import re
-
     answer = draft.answer.strip()
     if re.search(r"[\u4e00-\u9fff]", answer):
         raise ValueError("Malformed Vietnamese output")
     known = {item["ref"]: item for item in packet.evidence}
+    # Some small-model outputs use explicit "E1: fact" labels rather than
+    # brackets. Convert only that unambiguous formatting; validation below
+    # still decides whether the attributed review actually supports the fact.
+    if not re.search(r"\[E\d+\]", answer):
+        sentences = re.split(r"(?<=[.!?])\s+", answer)
+        labeled = []
+        for sentence in sentences:
+            label = re.match(r"(?:Nhận định (?:ngắn|khác)\s+)?(E\d+):\s*(.+)",
+                             sentence, flags=re.IGNORECASE)
+            if not label:
+                labeled = []
+                break
+            ref, fact = label.groups()
+            if ref not in known:
+                raise ValueError("Unknown inline citation")
+            labeled.append(f"{fact.rstrip('.')} [{ref}].")
+        if labeled:
+            answer = " ".join(labeled)
     inline = re.findall(r"\[(E\d+)\]", answer)
     refs = inline or [ref for ref in draft.evidence_review_ids if ref in known]
     if any(ref not in known for ref in inline):
         raise ValueError("Unknown inline citation")
     if inline:
         return answer, list(dict.fromkeys(inline))
+    if len(re.split(r"(?<=[.!?])\s+", answer)) > 1:
+        raise ValueError("Missing inline citations in multi-sentence answer")
     if not refs:
         refs = list(known)
     tokens = set(re.findall(r"[^\W_]{3,}", answer.casefold()))
@@ -75,6 +106,59 @@ def attach_citation(draft, packet):
     if overlap < 2:
         raise ValueError("Generated claim lacks lexical support")
     return f"{answer.rstrip('.')} [{selected_ref}].", [selected_ref]
+
+
+def generation_mode_label(mode):
+    return {"qwen": "AI synthesis", "extractive_fallback": "Evidence fallback",
+            "none": "Insufficient evidence"}.get(mode, mode)
+
+
+def _repair_instruction(reason):
+    targeted = {
+        "Answer adds off-topic restaurant facts":
+            "Chỉ nói về aspect được hỏi; bỏ toàn bộ chi tiết thuộc aspect khác.",
+        "Claim has missing or unknown evidence refs":
+            "Mỗi claim phải có evidence_refs chứa đúng E1/E2/E3 từ packet.",
+        "Complaint answer lacks complaint wording":
+            "Nêu đúng phàn nàn cụ thể trong review, không thay bằng nhận xét chung.",
+        "Answer clause lacks cited support":
+            "Xóa từng mệnh đề không được chính review gắn citation hỗ trợ.",
+        "Unsupported frequency claim":
+            "Bỏ các khẳng định về số lượng/tần suất khách hàng.",
+    }
+    return targeted.get(reason, "Viết lại ngắn, chỉ với sự kiện được review trích dẫn hỗ trợ.")
+
+
+def _answer_claims(answer, refs, packet, mode):
+    by_ref = {item["ref"]: item["review_id"] for item in packet.evidence}
+    sentences = ([answer] if mode == "extractive_fallback" else
+                 re.split(r"(?<=[.!?])\s+|;", answer))
+    return [V3Claim(
+        claim=sentence.strip(),
+        evidence_review_ids=[by_ref[ref] for ref in dict.fromkeys(
+            re.findall(r"\[(E\d+)\]", sentence)
+        ) if ref in by_ref],
+    ) for sentence in sentences if re.search(r"\[(E\d+)\]", sentence)]
+
+
+def _assemble_analysis(draft, packet):
+    if draft.insufficient_evidence or not draft.claims:
+        raise ValueError("Model declared insufficient evidence")
+    known = {item["ref"] for item in packet.evidence}
+    sentences = []
+    refs = []
+    for claim in draft.claims:
+        content = claim.text.strip().rstrip(".!?")
+        if (not content or len(content) > 220 or re.search(r"\[(?:E\d+)\]", content)
+                or re.search(r"[\u4e00-\u9fff]", content)
+                or len(re.split(r"[.!?]", content)) > 1):
+            raise ValueError("Claim must be one short uncited Vietnamese sentence")
+        if (not claim.evidence_refs or len(claim.evidence_refs) != len(set(claim.evidence_refs))
+                or any(ref not in known for ref in claim.evidence_refs)):
+            raise ValueError("Claim has missing or unknown evidence refs")
+        sentences.append(content + " " + "".join(f"[{ref}]" for ref in claim.evidence_refs) + ".")
+        refs.extend(claim.evidence_refs)
+    return " ".join(sentences), list(dict.fromkeys(refs))
 
 
 def prepare_question(retriever, request):
@@ -105,18 +189,24 @@ def answer_question_v3(retriever, gateway, request, *, prepared=None,
     citation_success = False
     clause_support_status = "not_checked"
     if packet.support_gate_status == "ACCEPTED":
+        rejected_answer = ""
         for attempt in range(2):
             generation_attempts += 1
-            correction = ("\nLần trước không đạt. Chỉ viết MỘT câu ngắn, đúng chủ đề "
-                          "với [E1] và evidence_review_ids=[\"E1\"]." if attempt else "")
+            correction = ("\nBản trước bị từ chối. KHÔNG lặp lại nguyên văn. "
+                          + _repair_instruction(failure_category)
+                          + " Mỗi claim có evidence_refs; chỉ dùng nội dung review đó hỗ trợ."
+                          if attempt else "")
+            payload = packet.generation_payload(request.query)
+            if attempt:
+                payload["repair"] = {"rejected_answer": rejected_answer,
+                                     "validation_failure": failure_category}
+            attempt_audit = []
             try:
-                attempt_audit = [] if generation_audit is not None else None
                 raw, usage = gateway.generate(
                     system=instruction + correction,
-                    user=json.dumps(packet.generation_payload(request.query),
-                                    ensure_ascii=False),
-                    response_schema=V3Draft.model_json_schema(),
-                    prompt_version=version, max_new_tokens=128,
+                    user=json.dumps(payload, ensure_ascii=False),
+                    response_schema=V3AnalysisDraft.model_json_schema(),
+                    prompt_version=version, max_new_tokens=192,
                     component="rag_v3_generation",
                     audit_sink=attempt_audit,
                 )
@@ -125,9 +215,11 @@ def answer_question_v3(retriever, gateway, request, *, prepared=None,
                                              "gateway": attempt_audit,
                                              "parsed_output": raw})
                 usages.append(usage)
-                draft = V3Draft.model_validate(raw)
+                draft = V3AnalysisDraft.model_validate(raw)
                 schema_success = True
-                cited_answer, cited_refs = attach_citation(draft, packet)
+                rejected_answer = " ".join(claim.text for claim in draft.claims)[:600]
+                cited_answer, cited_refs = _assemble_analysis(draft, packet)
+                rejected_answer = cited_answer[:600]
                 validate_packet_citations(cited_answer, cited_refs,
                                           packet, hits, route, request.query)
                 clause_support_status = "passed"
@@ -137,6 +229,8 @@ def answer_question_v3(retriever, gateway, request, *, prepared=None,
                 failure_category = None
                 break
             except (ValueError, KeyError, TypeError, requests.RequestException) as error:
+                if attempt_audit and not rejected_answer:
+                    rejected_answer = attempt_audit[0].get("raw_output", "")[:600]
                 failure_category = (str(error)[:120] if isinstance(error, ValueError)
                                     else type(error).__name__)
                 clause_support_status = "failed" if schema_success else "not_checked"
@@ -155,9 +249,7 @@ def answer_question_v3(retriever, gateway, request, *, prepared=None,
     cited_hits = evidence_for_refs(packet, refs, hits) if refs else []
     response = GroundedAnswerV3(
         answer=answer,
-        claims=[V3Claim(claim=answer,
-                        evidence_review_ids=[hit.review_id for hit in cited_hits])]
-        if cited_hits else [],
+        claims=_answer_claims(answer, refs, packet, mode) if cited_hits else [],
         evidence=_as_evidence(cited_hits), model=gateway.name,
         prompt_version=version, generation_mode=mode, query_route=route.category,
         support_gate_status=packet.support_gate_status,
