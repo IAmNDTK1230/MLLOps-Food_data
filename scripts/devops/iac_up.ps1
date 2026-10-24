@@ -40,13 +40,17 @@ if (-not $needsLoad) {
         'SELECT COUNT(*) FROM fact_review').Trim()
     $version = (docker compose @compose exec -T postgres psql -U foody -d foody -Atc `
         'SELECT MAX(version) FROM schema_migrations').Trim()
-    $needsLoad = $count -eq 0 -or $version -ne '002'
+    $needsLoad = $count -eq 0 -or $version -ne '003'
 }
 if ($needsLoad) {
     docker compose @compose exec -T rag-backend python -m src.cli warehouse-load
     if ($LASTEXITCODE -ne 0) { throw 'Warehouse load failed.' }
 } else {
     Write-Host "Warehouse already loaded ($count reviews; migration $version)."
+}
+if (Test-Path -LiteralPath (Join-Path $root 'data/foody/source/order_cleaning.csv')) {
+    docker compose @compose exec -T rag-backend python -m src.cli sales-load
+    if ($LASTEXITCODE -ne 0) { throw 'Sales load failed.' }
 }
 docker compose @compose exec -T kafka /opt/kafka/bin/kafka-topics.sh `
     --bootstrap-server localhost:19092 --create --if-not-exists `

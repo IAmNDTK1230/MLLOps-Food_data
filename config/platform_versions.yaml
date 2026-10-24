@@ -1,5 +1,5 @@
 project_version: 0.2.0-review2
 event_schema_version: '1.0'
-warehouse_schema_version: '002'
+warehouse_schema_version: '003'
 # Model/data hashes remain in reports/foody_intelligence/versions.json and
 # models/qwen_v3/provenance.json; this file does not duplicate binary artifacts.

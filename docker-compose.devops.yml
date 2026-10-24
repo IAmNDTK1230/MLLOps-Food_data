@@ -19,6 +19,7 @@ services:
     image: foody-rag-review2:local
     environment:
       FOODY_STREAMLIT_METRICS_PORT: "8002"
+      FOODY_DATABASE_URL: postgresql://foody:${FOODY_DB_PASSWORD:-foody_local_demo}@postgres:5432/foody
     networks: [default, foody_devops]
   postgres:
     image: postgres:17.11-alpine3.23

@@ -32,6 +32,9 @@ reports/**
 !reports/devops/
 !reports/devops/*.md
 !reports/devops/*.json
+!reports/sales/
+!reports/sales/*.md
+!reports/sales/*.json
 !reports/task2/
 !reports/task2/figures/
 !reports/task2/*.md

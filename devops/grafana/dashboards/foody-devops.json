@@ -273,6 +273,31 @@
           "unit": "short"
         }
       }
+    },
+    {
+      "id": 11,
+      "title": "Sales SQL requests",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "foody-prometheus"},
+      "targets": [{"expr": "sum(foody_sales_queries_total)", "legendFormat": "Sales SQL"}],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40}
+    },
+    {
+      "id": 12,
+      "title": "Cross-analysis requests",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "foody-prometheus"},
+      "targets": [{"expr": "sum(foody_cross_analysis_requests_total)", "legendFormat": "Cross-analysis"}],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40}
+    },
+    {
+      "id": 13,
+      "title": "Sales SQL latency P95",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "foody-prometheus"},
+      "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(foody_sales_sql_duration_seconds_bucket[5m])))", "legendFormat": "Sales SQL P95"}],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 48},
+      "fieldConfig": {"defaults": {"unit": "s"}}
     }
   ],
   "tags": [

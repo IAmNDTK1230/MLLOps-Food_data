@@ -44,14 +44,18 @@ def test_api_exposes_bounded_metrics_and_versions():
     assert "foody_api_request_duration_seconds" in response.text
     version = client.get("/version")
     assert version.status_code == 200
-    assert version.json()["warehouse_schema_version"] == "002"
+    assert version.json()["warehouse_schema_version"] == "003"
     assert "qwen_model" in version.json()
 
 
 def test_devops_configs_have_one_topic_and_dashboard():
     dashboard = json.loads(Path("devops/grafana/dashboards/foody-devops.json").read_text())
     assert dashboard["title"] == "Foody DevOps & LLMOps"
-    assert len(dashboard["panels"]) == 10
+    assert len(dashboard["panels"]) == 13
+    assert [panel["id"] for panel in dashboard["panels"][:10]] == list(range(1, 11))
+    assert {panel["title"] for panel in dashboard["panels"][10:]} == {
+        "Sales SQL requests", "Cross-analysis requests", "Sales SQL latency P95",
+    }
     compose = Path("docker-compose.devops.yml").read_text()
     assert "foody.review.events" not in compose  # topic is created explicitly by startup
     assert "apache/kafka:3.9.1" in compose

@@ -17,6 +17,9 @@ LLM_LATENCY = Histogram(
 )
 INPUT_TOKENS = Counter("foody_llm_input_tokens_total", "LLM input tokens")
 OUTPUT_TOKENS = Counter("foody_llm_output_tokens_total", "LLM output tokens")
+SALES_QUERIES = Counter("foody_sales_queries_total", "SQL sales questions", ["status"])
+CROSS_REQUESTS = Counter("foody_cross_analysis_requests_total", "Cross-analysis questions", ["status"])
+SALES_DURATION = Histogram("foody_sales_sql_duration_seconds", "SQL sales question latency")
 
 _SERVER_LOCK = Lock()
 _SERVER_STARTED = False
@@ -56,3 +59,16 @@ def observe_rag(telemetry):
         LLM_LATENCY.observe(telemetry["llm_latency_ms"] / 1000)
     INPUT_TOKENS.inc(telemetry.get("input_tokens") or 0)
     OUTPUT_TOKENS.inc(telemetry.get("output_tokens") or 0)
+
+
+def observe_sales_sql(duration_seconds, status):
+    """Record one SQL answer with bounded status labels."""
+    SALES_QUERIES.labels(status=status if status in {"ok", "no_data", "error"} else "other").inc()
+    SALES_DURATION.observe(duration_seconds)
+
+
+def observe_cross_analysis(status):
+    CROSS_REQUESTS.labels(status=status if status in {
+        "grounded", "no_aligned_reviews", "unmatched_restaurant", "no_sales_data",
+        "insufficient_review_evidence", "error",
+    } else "other").inc()

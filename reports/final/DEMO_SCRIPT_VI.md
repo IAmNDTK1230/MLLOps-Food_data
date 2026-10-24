@@ -37,3 +37,11 @@ Hỏi “Khách có phàn nàn về giá không?” rồi nhấn **Ask**. Chỉ 
 ## 7:30–8:30 — LLMOps và kết luận
 
 Trong sidebar chọn **LLMOps Monitor**. Chỉ mục **PRODUCTION / DEMO MONITORING**: RAG V3, Qwen 3B, prompt/model version và các request log không chứa câu hỏi/văn bản review thô. Kéo xuống **RESEARCH METRICS** để nhắc rằng điểm benchmark VN-MSASar tách biệt khỏi phân bố suy luận Foody. “Đánh giá RAG V3 cố định có sáu trường hợp: một câu tổng hợp Qwen được chấp nhận, hai fallback có nguồn, ba từ chối đúng và không có câu được chấp nhận mà thiếu hỗ trợ. Tập này nhỏ; nhóm bọn em chỉ kết luận hệ thống demo có thể kiểm tra chứng cứ và từ chối thận trọng, chưa khẳng định độ tin cậy tổng quát.”
+
+## Phần mở rộng Sales / Review / Cross (2–3 phút, khi PostgreSQL sẵn sàng)
+
+Trong **AI Review Analyst**, giữ câu hỏi review mặc định về phục vụ Hanuri và nhấn **Ask**: chỉ câu trả lời RAG V3 cùng trích dẫn `[E1]`; Hanuri mặc định không được coi là cùng ID với một chi nhánh Hanuri trong dữ liệu đơn hàng.
+
+Đổi câu hỏi thành **“Doanh thu tháng 2025-05 là bao nhiêu?”** và chọn **Thai Market Restaurant - 95 Cao Thắng [ID 1853]** trong hộp Sales restaurant ID. Nhấn **Ask**: nguồn **SQL Analytics**, doanh thu Delivered **492.320 VND**, **4 đơn**, tăng **8,25%** so với tháng 2025-04. Đây là số từ PostgreSQL, không do Qwen tính.
+
+Đổi câu hỏi thành **“Doanh thu tháng 2025-05 và khách phàn nàn điều gì?”**, giữ đúng Sales ID 1853. Nhấn **Ask**: nguồn **Hybrid SQL + RAG**; chỉ số doanh thu vẫn đến từ SQL, phần phàn nàn phải có review cùng nhà hàng/cùng tháng và citation `[E1]`. Đọc câu giới hạn: sự trùng thời gian **không chứng minh quan hệ nhân quả**. Nếu chọn một ID không có ánh xạ xác minh, hệ thống phải từ chối ghép hai nguồn. Các đơn có ngày tương lai so với ngày hiện tại ở Việt Nam không được trình bày như doanh thu đã quan sát.

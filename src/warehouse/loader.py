@@ -83,12 +83,16 @@ def load(conn):
     dates.update(date.fromisoformat(v + "-01") for v in monthly.period)
     # TRUNCATE is deliberately scoped to batch tables. Event history survives reloads.
     conn.execute("TRUNCATE fact_review, fact_restaurant_daily, fact_restaurant_monthly, "
-                 "fact_aspect, fact_issue, dim_date, dim_restaurant")
-    _copy(conn, "dim_restaurant", ("restaurant_key", "restaurant_name"),
-          ((r.restaurant_key, r.restaurant_name) for r in
-           marts["summary"].itertuples(index=False)))
-    _copy(conn, "dim_date", ("date_key", "calendar_date", "day", "month", "year"),
-          ((_date_key(d), d, d.day, d.month, d.year) for d in sorted(dates)))
+                 "fact_aspect, fact_issue")
+    with conn.cursor() as cursor:
+        cursor.executemany("""INSERT INTO dim_restaurant(restaurant_key, restaurant_name)
+            VALUES (%s,%s) ON CONFLICT (restaurant_key) DO UPDATE
+            SET restaurant_name=EXCLUDED.restaurant_name""",
+            ((r.restaurant_key, r.restaurant_name) for r in
+             marts["summary"].itertuples(index=False)))
+        cursor.executemany("""INSERT INTO dim_date(date_key,calendar_date,day,month,year)
+            VALUES (%s,%s,%s,%s,%s) ON CONFLICT (date_key) DO NOTHING""",
+            ((_date_key(d), d, d.day, d.month, d.year) for d in sorted(dates)))
     _copy(conn, "fact_review", ("review_id", "restaurant_key", "date_key", "rating",
                                 "predicted_sentiment", "predicted_aspects", "review_text"),
           ((r.review_id, r.restaurant_key,

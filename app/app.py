@@ -86,6 +86,41 @@ def restaurant_page():
         alerts = table(alert_path)
         st.subheader("Historical rule alerts")
         st.dataframe(alerts.loc[alerts.restaurant_key == key], hide_index=True)
+    try:
+        from src.sales import queries
+        from src.warehouse.loader import connection
+
+        with connection() as conn:
+            matched = next((item for item in queries.list_restaurants(conn, matched_only=True)
+                            if item["restaurant_key"] == key), None)
+            if matched:
+                sales = queries.sales_summary(conn, matched["restaurant_id"])
+                monthly = queries.monthly_trend(conn, matched["restaurant_id"])
+                weekly = queries.weekly_trend(conn, matched["restaurant_id"])
+                statuses = queries.order_status_summary(conn, matched["restaurant_id"])
+            else:
+                sales = monthly = weekly = statuses = None
+        st.subheader("Verified sales analytics")
+        if matched and sales:
+            st.caption(f"Source: SQL Analytics · sales restaurant ID {matched['restaurant_id']} "
+                       "· exact unique normalized-name match. Future-dated orders excluded.")
+            a, b, c, d = st.columns(4)
+            a.metric("Delivered revenue (VND)", f"{sales['delivered_sales']:,.0f}")
+            b.metric("Observed orders", sales["order_count"])
+            c.metric("Delivered AOV (VND)", f"{sales['aov']:,.0f}")
+            d.metric("Cancellation rate", f"{sales['cancellation_rate']:.1%}")
+            if monthly:
+                st.caption(f"Latest observed month: {monthly[-1]['period_start']:%Y-%m}, "
+                           f"Delivered revenue {monthly[-1]['delivered_sales']:,.0f} VND")
+                st.line_chart(pd.DataFrame(monthly).set_index("period_start")["delivered_sales"])
+            if weekly:
+                st.caption("Weekly Delivered revenue")
+                st.line_chart(pd.DataFrame(weekly).set_index("period_start")["delivered_sales"])
+            st.bar_chart(pd.DataFrame(statuses).set_index("order_status")["order_count"])
+        else:
+            st.info("No verified sales ID mapping or observed orders for this review restaurant.")
+    except Exception:
+        st.caption("Sales warehouse unavailable; review analytics remain available.")
     if st.button("Generate Qwen health report"):
         try:
             from src.rag_v3.cli import selected_v3_gateway
@@ -150,7 +185,52 @@ def analyst_page():
                "Khách có phàn nàn về giá không? · "
                "Tại sao đánh giá của nhà hàng này giảm?")
     question = st.text_input("Question", "Nhân viên phục vụ có vấn đề gì không?")
+    from src.sales.router import route_question
+
+    route = route_question(question)
+    sales_id = None
+    if route != "REVIEW_RAG":
+        try:
+            from src.sales import queries
+            from src.warehouse.loader import connection
+
+            with connection() as conn:
+                options = queries.list_restaurants(conn, matched_only=route == "CROSS_ANALYSIS")
+            if options:
+                selected = st.selectbox("Sales restaurant ID (verified mapping required for cross-analysis)",
+                                        options, format_func=lambda item: f"{item['restaurant_name']} "
+                                        f"[ID {item['restaurant_id']}]",
+                                        key="sales_restaurant_id")
+                sales_id = selected["restaurant_id"]
+        except Exception:
+            st.warning("Sales warehouse is unavailable.")
     if st.button("Ask"):
+        if route != "REVIEW_RAG":
+            if sales_id is None:
+                st.error("Choose a sales restaurant ID from the warehouse before asking.")
+                return
+            try:
+                from src.sales.service import answer_question
+                from src.warehouse.loader import connection
+
+                with st.spinner("Checking verified sales and aligned review evidence..."):
+                    with connection() as conn:
+                        result = answer_question(conn, sales_id, question)
+                st.subheader("Restaurant Analysis")
+                st.caption(f"Source: {result['source']} · Route: {result['route']} "
+                           f"· Status: {result['status']}")
+                st.write(result["answer"])
+                if result.get("sql_facts"):
+                    with st.expander("Verified SQL facts"):
+                        st.json(result["sql_facts"])
+                if result.get("review_evidence"):
+                    st.subheader("Review evidence used")
+                    for item in result["review_evidence"]:
+                        st.json(item)
+                return
+            except Exception as error:
+                st.error(f"Sales analysis unavailable ({type(error).__name__}).")
+                return
         try:
             from src.rag.schemas import RetrievalRequest
             from src.rag_v3.cli import selected_v3_gateway

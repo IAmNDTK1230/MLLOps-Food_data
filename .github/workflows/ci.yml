@@ -57,6 +57,7 @@ jobs:
           python -m json.tool devops/grafana/dashboards/foody-devops.json > /dev/null
           test -f warehouse/migrations/001_init.sql
           test -f warehouse/migrations/002_indexes.sql
+          test -f warehouse/migrations/003_sales.sql
       - name: Build artifact-free Streamlit image
         run: docker build --file Dockerfile.rag --tag food-review-intelligence:ci .
 

@@ -44,6 +44,10 @@ def main() -> int:
     bootstrap.add_argument("--output", default="scripts/databricks_bootstrap.sql")
     commands.add_parser("demo-preflight", help="Read-only frozen demo artifact checks")
     commands.add_parser("warehouse-load", help="Idempotently load frozen Foody marts")
+    commands.add_parser("sales-load", help="Audit and idempotently load Foody order CSV")
+    sales_query = commands.add_parser("sales-query", help="Ask a bounded SQL/cross sales question")
+    sales_query.add_argument("--restaurant-id", required=True)
+    sales_query.add_argument("--question", required=True)
     replay = commands.add_parser("kafka-produce", help="Replay a bounded Foody event sample")
     replay.add_argument("--limit", type=int, default=20)
     commands.add_parser("serve", help="Serve the configurable Prefect deployment")
@@ -61,6 +65,18 @@ def main() -> int:
     rag_v2_cli.add_commands(commands)
     rag_v3_cli.add_commands(commands)
     args = parser.parse_args()
+    if args.command == "sales-load":
+        from src.sales.loader import main as sales_main
+
+        return sales_main()
+    if args.command == "sales-query":
+        from src.sales.service import answer_question
+        from src.warehouse.loader import connection
+
+        with connection() as conn:
+            result = answer_question(conn, args.restaurant_id, args.question)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
     if args.command == "warehouse-load":
         from src.warehouse.loader import main as warehouse_main
 
