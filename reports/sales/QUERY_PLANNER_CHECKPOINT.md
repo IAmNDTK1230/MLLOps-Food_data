@@ -20,6 +20,21 @@ Base commit: `35986b0e1fe4c81b4eac107eca2a6198464ea879` on the current checkout.
 - `compileall -q src app scripts`: **PASS**.
 - `python -m src.cli demo-preflight`: **PASS**.
 
-## Deferred Phase 2
+## Phase 2 implemented
 
-`MAX_MIN_PERIOD`, `PERIOD_TREND`, range aggregation, yearly totals, average monthly revenue, and multi-step analytical plans are not implemented in this checkpoint.
+- `MAX_MIN_PERIOD` selects the highest or lowest observed monthly Delivered revenue within a named year.
+- `PERIOD_TREND` reports a bounded monthly series for an explicit range or the six most recently completed months.
+- `RANGE_AGGREGATE` sums an explicit month range or named quarter. `YEAR_AGGREGATE` sums a year or calculates average monthly revenue from its observed complete months.
+- `MULTI_STEP_ANALYSIS` finds the largest month over month decline in a bounded range using the month before the range as the first reference. It also finds a year's highest and lowest months and their absolute spread.
+- The current year uses only completed months for yearly extrema and aggregates, and the answer names the effective range. All effective months must have SQL facts; missing periods return `no_data` instead of a partial or invented total. Explicit future months remain rejected by the existing query guard.
+- The same planner produces an intent, metric, bounded periods, aggregation, and ordered analytical steps. The executor uses only parameterized `monthly_sales` SQL and deterministic Python math. Technical Details display the plan and SQL mode.
+- Forecasting, ML anomaly detection, restaurant ranking, cross-review changes, retraining, and new models remain out of scope.
+
+### Phase 2 validation
+
+- Focused Phase 1, Phase 2, existing Sales, and Sales UI tests: **58 passed**.
+- Ruff on changed files: **PASS**.
+- Full pytest suite: **367 passed**, one dependency deprecation warning. The unrestricted local run was required because the sandbox stalled on a minimal `asyncio.sleep(0)` call in an unrelated crawler test.
+- `compileall -q src app scripts`: **PASS**.
+- `python -m src.cli demo-preflight`: **PASS**.
+- A live SQL result was not obtained because the local PostgreSQL connection on port 5433 was unavailable in this execution environment. The focused tests use controlled SQL facts and verify requested periods and calculations.

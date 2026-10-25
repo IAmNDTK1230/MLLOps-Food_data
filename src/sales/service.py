@@ -6,6 +6,7 @@ from time import perf_counter
 from src.monitoring.metrics import observe_cross_analysis, observe_rag, observe_sales_sql
 from src.rag.monitoring import record
 from src.sales import queries
+from src.sales.analysis import answer_advanced
 from src.sales.comparisons import answer_comparison
 from src.sales.planner import build_sales_plan
 from src.sales.router import (
@@ -56,9 +57,13 @@ def sales_answer(conn, restaurant_id, question, *, today=None):
     if identity is None:
         raise ValueError("Unknown sales restaurant_id")
     try:
-        plan = build_sales_plan(question)
+        plan = build_sales_plan(question, today=today)
         if plan.kind == "COMPARE_PERIODS":
             result = answer_comparison(conn, restaurant_id, identity, plan, today=today)
+            _record("sales_sql", started, result["status"])
+            return result
+        if plan.kind != "SINGLE_PERIOD_METRIC":
+            result = answer_advanced(conn, restaurant_id, identity, plan, today=today)
             _record("sales_sql", started, result["status"])
             return result
     except ValueError as error:

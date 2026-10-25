@@ -151,7 +151,8 @@ def _ask_sql(restaurant_id):
                         result = answer_question(conn, restaurant_id, question)
                 answer_card("SQL answer", result["answer"], "SQL Verified", "good")
                 with st.expander("Technical details"):
-                    st.json({key: result.get(key) for key in ("route", "status", "sql_facts")})
+                    st.json({key: result.get(key) for key in
+                             ("route", "status", "query_plan", "sql_facts")})
             except Exception as error:
                 st.error("Unable to query the sales warehouse.")
                 with st.expander("Technical details"):

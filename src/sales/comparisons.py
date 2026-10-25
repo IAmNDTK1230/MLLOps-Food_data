@@ -27,8 +27,11 @@ def answer_comparison(conn, restaurant_id, identity, plan, *, today=None):
         plan.periods, rows, strict=True)}
     missing = [period for period, row in zip(plan.periods, rows, strict=True)
                if row is None or row.get(plan.metric) is None]
-    trace = {"kind": plan.kind, "metric": plan.metric,
-             "periods": list(plan.periods), "comparison": plan.comparison}
+    trace = {"kind": plan.kind, "intent": plan.kind, "metric": plan.metric,
+             "periods": list(plan.periods), "comparison": plan.comparison,
+             "range": {"start": plan.periods[0], "end": plan.periods[-1]},
+             "aggregation": "difference", "analytical_steps": ["fetch_monthly_metrics",
+             "calculate_difference"], "sql_mode": "predefined_parameterized_monthly_sales"}
     if missing:
         labels = ", ".join(_display_period(period) for period in missing)
         return {"route": "SALES_SQL", "source": "SQL Analytics",

@@ -316,7 +316,7 @@ def analyst_page():
                                       f"{snippet.get('date', 'Date unavailable')}")
                 with st.expander("Technical details"):
                     st.json({key: result.get(key) for key in
-                             ("source", "route", "status", "sql_facts")})
+                             ("source", "route", "status", "query_plan", "sql_facts")})
                 return
             except Exception as error:
                 st.error("Unable to complete restaurant analysis.")
