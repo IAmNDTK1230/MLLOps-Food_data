@@ -6,6 +6,8 @@ from time import perf_counter
 from src.monitoring.metrics import observe_cross_analysis, observe_rag, observe_sales_sql
 from src.rag.monitoring import record
 from src.sales import queries
+from src.sales.comparisons import answer_comparison
+from src.sales.planner import build_sales_plan
 from src.sales.router import (
     month_in_question,
     route_question,
@@ -53,6 +55,17 @@ def sales_answer(conn, restaurant_id, question, *, today=None):
     identity = queries.restaurant(conn, restaurant_id)
     if identity is None:
         raise ValueError("Unknown sales restaurant_id")
+    try:
+        plan = build_sales_plan(question)
+        if plan.kind == "COMPARE_PERIODS":
+            result = answer_comparison(conn, restaurant_id, identity, plan, today=today)
+            _record("sales_sql", started, result["status"])
+            return result
+    except ValueError as error:
+        _record("sales_sql", started, "invalid_period")
+        return {"route": "SALES_SQL", "source": "SQL Analytics",
+                "answer": str(error), "restaurant_id": str(restaurant_id),
+                "sql_facts": None, "review_evidence": [], "status": "invalid_period"}
     lowered = question.casefold()
     month = _month_for_question(question, today)
     source = "SQL Analytics"
