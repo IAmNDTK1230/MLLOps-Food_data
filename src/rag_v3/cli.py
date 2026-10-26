@@ -47,12 +47,16 @@ def execute(args):
     retriever = RoutedRetriever()
     with selected_v3_gateway() as gateway:
         if args.command == "rag-v3-query":
+            from src.foody.review_runtime import new_corpus_active, review_identity
             from src.rag_v3.service import answer_question_v3
 
-            key, _ = resolve_restaurant(args.restaurant)
+            key = review_identity(args.restaurant)[0] if new_corpus_active() else \
+                resolve_restaurant(args.restaurant)[0]
             result, hits, telemetry, debug, packet = answer_question_v3(
                 retriever, gateway, RetrievalRequest(
-                    query=args.question, restaurant_key=key, top_k=args.top_k,
+                    query=args.question, top_k=args.top_k,
+                    **({"restaurant_id": key} if new_corpus_active() else
+                       {"restaurant_key": key}),
                 ),
             )
             output = {"response": result.model_dump(), "telemetry": telemetry,

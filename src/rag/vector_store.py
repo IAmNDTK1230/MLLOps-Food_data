@@ -20,7 +20,8 @@ def read_documents(path=DOCUMENTS):
             review_id = doc["id"]
             if review_id in seen or review_id != metadata["review_id"]:
                 raise ValueError("Duplicate or inconsistent RAG review ID")
-            if not doc["text"].strip() or "\ufffd" in doc["text"] or metadata["source"] != "foody":
+            if (not doc["text"].strip() or "\ufffd" in doc["text"]
+                    or metadata["source"] not in {"foody", "foody_review_2025_2026"}):
                 raise ValueError("Invalid document in first-party RAG source")
             seen.add(review_id)
             yield doc
@@ -38,17 +39,21 @@ def epoch(value):
 def chroma_metadata(doc):
     source = doc["metadata"]
     metadata = {
-        "review_id": doc["id"], "restaurant_key": source["restaurant_key"],
+        "review_id": doc["id"],
         "restaurant_name": source["restaurant_name"],
-        "review_timestamp": source["review_timestamp"] or "",
-        "raw_rating": source["raw_rating"],
+        "review_timestamp": (source.get("review_timestamp") or source.get("review_time") or ""),
+        "raw_rating": source.get("raw_rating", source.get("rating")),
         "predicted_sentiment": source["predicted_sentiment"],
         "predicted_aspects": json.dumps(source["predicted_aspects"], ensure_ascii=False),
         "detected_issues": json.dumps(source["detected_issues"], ensure_ascii=False),
-        "source": "foody",
+        "source": source["source"],
     }
-    if source["review_timestamp"]:
-        metadata["timestamp_epoch"] = epoch(source["review_timestamp"])
+    if source.get("restaurant_id") is not None:
+        metadata["restaurant_id"] = str(source["restaurant_id"])
+    if source.get("restaurant_key") is not None:
+        metadata["restaurant_key"] = source["restaurant_key"]
+    if metadata["review_timestamp"]:
+        metadata["timestamp_epoch"] = epoch(metadata["review_timestamp"])
     for aspect in source["predicted_aspects"]:
         metadata[f"aspect_{aspect}"] = True
     return metadata

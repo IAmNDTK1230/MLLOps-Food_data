@@ -1,0 +1,3 @@
+# Switch only after the side-by-side corpus, indexes, warehouse and RAG checks pass.
+active: review_2025_2026_v1
+candidate: review_2025_2026_v1

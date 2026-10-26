@@ -1,6 +1,7 @@
 """Grounded SQL answers and date-aligned review cross-analysis."""
 
 from datetime import datetime, timedelta
+from decimal import Decimal
 from time import perf_counter
 
 from src.monitoring.metrics import observe_cross_analysis, observe_rag, observe_sales_sql
@@ -9,6 +10,9 @@ from src.sales import queries
 from src.sales.analysis import answer_advanced
 from src.sales.comparisons import answer_comparison
 from src.sales.planner import build_sales_plan
+from src.sales.response import SalesAnalysisResult, render
+from src.sales.response import money as display_money
+from src.sales.response import percentage as display_percentage
 from src.sales.router import (
     month_in_question,
     route_question,
@@ -49,7 +53,7 @@ def _record(route, started, status, *, input_tokens=0, output_tokens=0,
         observe_cross_analysis(status)
 
 
-def sales_answer(conn, restaurant_id, question, *, today=None):
+def sales_answer(conn, restaurant_id, question, *, today=None, naturalizer=None):
     """Answer numeric questions from predefined SQL only."""
     started = perf_counter()
     today = today or queries.vietnam_today()
@@ -59,7 +63,8 @@ def sales_answer(conn, restaurant_id, question, *, today=None):
     try:
         plan = build_sales_plan(question, today=today)
         if plan.kind == "COMPARE_PERIODS":
-            result = answer_comparison(conn, restaurant_id, identity, plan, today=today)
+            result = answer_comparison(conn, restaurant_id, identity, plan, today=today,
+                                       question=question, naturalizer=naturalizer)
             _record("sales_sql", started, result["status"])
             return result
         if plan.kind != "SINGLE_PERIOD_METRIC":
@@ -72,48 +77,79 @@ def sales_answer(conn, restaurant_id, question, *, today=None):
                 "answer": str(error), "restaurant_id": str(restaurant_id),
                 "sql_facts": None, "review_evidence": [], "status": "invalid_period"}
     lowered = question.casefold()
-    month = _month_for_question(question, today)
+    try:
+        month = _month_for_question(question, today)
+    except ValueError as error:
+        _record("sales_sql", started, "invalid_period")
+        return {"route": "SALES_SQL", "source": "SQL Analytics",
+                "answer": str(error), "restaurant_id": str(restaurant_id),
+                "sql_facts": None, "review_evidence": [], "status": "invalid_period"}
     source = "SQL Analytics"
+    simple_analysis = None
+    simple_trace = None
     if "cao nhất" in lowered or "highest" in lowered:
         facts = queries.highest_sales_month(conn, restaurant_id, today=today)
         answer = (f"Tháng doanh thu Delivered cao nhất của {identity['restaurant_name']} "
-                  f"là {facts['period_start']:%Y-%m}: {_money(facts['delivered_sales'])}.") if facts else \
+                  f"là {facts['period_start']:%m/%Y}: {display_money(facts['delivered_sales'])}.") if facts else \
             "Chưa có tháng hoàn chỉnh để xếp hạng doanh thu."
     elif "tuần" in lowered or "tuan" in lowered or "week" in lowered:
         week = today.fromordinal(today.toordinal() - today.weekday()) if \
             wants_current_week(question) else None
         facts = queries.weekly_sales(conn, restaurant_id, week, today=today)
         answer = (f"Doanh thu Delivered tuần bắt đầu {facts['period_start']}: "
-                  f"{_money(facts['delivered_sales'])}; {facts['order_count']} đơn, "
-                  f"AOV {_money(facts['aov'])}.") if facts else "Không có đơn trong tuần được hỏi."
+                  f"{display_money(facts['delivered_sales'])}; {facts['order_count']} đơn, "
+                  f"AOV {display_money(facts['aov'])}.") if facts else "Không có đơn trong tuần được hỏi."
     elif any(term in lowered for term in ("cancelled", "refunded", "delivered", "đơn hủy",
                                          "tỷ lệ", "aov", "order status")):
         facts = queries.sales_summary(conn, restaurant_id)
         answer = (f"{identity['restaurant_name']}: {facts['order_count']} đơn đã quan sát; "
                   f"Delivered {facts['delivered_count']}, Cancelled {facts['cancelled_count']}, "
                   f"Refunded {facts['refunded_count']}; tỷ lệ hủy "
-                  f"{facts['cancellation_rate'] * 100:.2f}%, tỷ lệ hoàn "
-                  f"{facts['refund_rate'] * 100:.2f}%, AOV Delivered "
-                  f"{_money(facts['aov'])}.") if facts else "Chưa có đơn đã quan sát."
+                  f"{display_percentage(facts['cancellation_rate'] * 100)}, tỷ lệ hoàn "
+                  f"{display_percentage(facts['refund_rate'] * 100)}, AOV Delivered "
+                  f"{display_money(facts['aov'])}.") if facts else "Chưa có đơn đã quan sát."
     else:
         facts = queries.monthly_comparison(conn, restaurant_id, month, today=today)
         if facts:
             basis = (" So sánh với cùng số ngày của tháng trước; tháng này chưa hoàn tất."
                      if facts["comparison_basis"] == "same_day_of_month_partial" else "")
-            answer = (f"Doanh thu Delivered của {identity['restaurant_name']} trong "
-                      f"{facts['period_start']:%Y-%m}: {_money(facts['delivered_sales'])}; "
-                      f"{facts['order_count']} đơn, AOV {_money(facts['aov'])}; "
-                      f"thay đổi {_percent(facts['comparison_growth'])} so với kỳ trước.{basis}")
+            period = facts["period_start"].strftime("%Y-%m")
+            simple_analysis = SalesAnalysisResult(
+                intent="SINGLE_PERIOD_METRIC", response_mode="FACTUAL",
+                metric="delivered_sales", periods=[period],
+                values=[Decimal(str(facts["delivered_sales"]))],
+                details={"order_count": facts["order_count"], "aov": facts["aov"],
+                         "comparison_growth": facts["comparison_growth"]},
+            )
+            answer = render(simple_analysis, identity["restaurant_name"]) + basis
+            simple_trace = {"intent": "SINGLE_PERIOD_METRIC", "response_mode": "FACTUAL",
+                            "metric": "delivered_sales", "periods": [period],
+                            "aggregation": None, "period_selection": "EXPLICIT_SET" if month else None,
+                            "sql_functions": ["monthly_comparison"],
+                            "calculations": ["comparison_growth"],
+                            "sql_mode": "predefined_parameterized_monthly_sales",
+                            "qwen_used": False, "grounding_status": "sql_verified",
+                            "fact_validation_status": "not_needed"}
         else:
-            answer = "Không có dữ liệu đơn hàng trong tháng được hỏi."
+            answer = (f"Kỳ dữ liệu: {month[5:7]}/{month[:4]}. " if month else "") + \
+                "Không có dữ liệu đơn hàng trong tháng được hỏi."
     status = "ok" if facts else "no_data"
     _record("sales_sql", started, status)
     return {"route": "SALES_SQL", "source": source, "answer": answer,
             "restaurant_id": str(restaurant_id), "sql_facts": queries.jsonable(facts),
-            "review_evidence": [], "status": status}
+            "review_evidence": [], "status": status,
+            "query_plan": simple_trace,
+            "analysis": simple_analysis.as_dict() if simple_analysis else None}
 
 
 def _aligned_review_count(conn, restaurant_key, start, end):
+    from src.foody.review_runtime import new_corpus_active
+
+    if new_corpus_active():
+        return conn.execute("""SELECT COUNT(*) FROM fact_review_v2 r
+            JOIN dim_date d ON d.date_key=r.date_key
+            WHERE r.restaurant_id=%s AND d.calendar_date BETWEEN %s AND %s""",
+            (str(restaurant_key), start, end)).fetchone()[0]
     return conn.execute("""SELECT COUNT(*) FROM fact_review r
         JOIN dim_date d ON d.date_key=r.date_key
         WHERE r.restaurant_key=%s AND d.calendar_date BETWEEN %s AND %s""",
@@ -134,16 +170,27 @@ def cross_answer(conn, restaurant_id, question, *, today=None,
     started = perf_counter()
     today = today or queries.vietnam_today()
     identity = queries.restaurant(conn, restaurant_id)
+    from src.foody.review_runtime import new_corpus_active
+
+    direct_id = new_corpus_active()
+    review_identity = (identity.get("review_restaurant_id") if direct_id else
+                       identity.get("restaurant_key")) if identity else None
     if identity is None:
         raise ValueError("Unknown sales restaurant_id")
-    if identity["restaurant_key"] is None:
+    if review_identity is None:
         answer = ("Không có ánh xạ ID nhà hàng được xác minh giữa đơn hàng và đánh giá; "
                   "không thể tổng hợp hai nguồn cho nhà hàng này.")
         _record("cross_analysis", started, "unmatched_restaurant")
         return {"route": "CROSS_ANALYSIS", "source": "Hybrid SQL + RAG",
                 "answer": answer, "sql_facts": None, "review_evidence": [],
                 "restaurant_id": str(restaurant_id), "status": "unmatched_restaurant"}
-    month = _month_for_question(question, today)
+    try:
+        month = _month_for_question(question, today)
+    except ValueError as error:
+        _record("cross_analysis", started, "invalid_period")
+        return {"route": "CROSS_ANALYSIS", "source": "Hybrid SQL + RAG",
+                "answer": str(error), "sql_facts": None, "review_evidence": [],
+                "restaurant_id": str(restaurant_id), "status": "invalid_period"}
     lowered = question.casefold()
     if "giảm mạnh nhất" in lowered or "largest decline" in lowered:
         metric = queries.lowest_growth_month(conn, restaurant_id, today=today)
@@ -163,9 +210,9 @@ def cross_answer(conn, restaurant_id, question, *, today=None,
     sales_text = (f"Theo SQL, doanh thu Delivered {start:%Y-%m} là "
                   f"{_money(metric['delivered_sales'])}, {metric['order_count']} đơn; "
                   f"thay đổi {_percent(growth)} so với kỳ trước.")
-    count = _aligned_review_count(conn, identity["restaurant_key"], start, end)
+    count = _aligned_review_count(conn, review_identity, start, end)
     if count == 0:
-        answer = (sales_text + " Không có đánh giá cùng kỳ cho đúng nhà hàng đã ánh xạ; "
+        answer = (sales_text + " Không có đánh giá cùng kỳ cho đúng nhà hàng; "
                   "không đủ bằng chứng để liên hệ biến động doanh thu với phản hồi khách hàng.")
         _record("cross_analysis", started, "no_aligned_reviews")
         return {"route": "CROSS_ANALYSIS", "source": "Hybrid SQL + RAG",
@@ -175,23 +222,28 @@ def cross_answer(conn, restaurant_id, question, *, today=None,
 
     from src.rag.schemas import RetrievalRequest
     from src.rag_v3.cli import selected_v3_gateway
-    from src.rag_v3.retriever import RoutedRetriever
+    from src.rag_v3.retriever import cached_retriever
     from src.rag_v3.service import answer_question_v3
 
-    retriever_factory = retriever_factory or RoutedRetriever
+    retriever_factory = retriever_factory or cached_retriever
     gateway_factory = gateway_factory or selected_v3_gateway
     request = RetrievalRequest(
         query="Khách phàn nàn gì về món ăn, phục vụ hoặc giá?",
-        restaurant_key=identity["restaurant_key"],
+        **({"restaurant_id": str(review_identity)} if direct_id else
+           {"restaurant_key": review_identity}),
         date_from=datetime.combine(start, datetime.min.time()),
         date_to=datetime.combine(end, datetime.min.time()), top_k=5,
     )
     with gateway_factory() as gateway:
-        review_answer, _, telemetry, _, _ = answer_question_v3(
+        review_answer, _, telemetry, _, packet = answer_question_v3(
             retriever_factory(), gateway, request,
         )
     observe_rag(telemetry)
-    evidence = [item.model_dump() for item in review_answer.evidence]
+    by_id = {item["review_id"]: item for item in packet.evidence}
+    evidence = [{**item.model_dump(), **{
+        key: by_id[item.review_id].get(key)
+        for key in ("ref", "date", "rating", "sentiment", "aspects", "text", "source")
+    }} for item in review_answer.evidence if item.review_id in by_id]
     if evidence:
         answer = (sales_text + " Phản hồi cùng kỳ: " + review_answer.answer
                   + " Đây là sự trùng thời gian, không chứng minh quan hệ nhân quả.")
@@ -215,7 +267,8 @@ def cross_answer(conn, restaurant_id, question, *, today=None,
 def answer_question(conn, restaurant_id, question, **kwargs):
     route = route_question(question)
     if route == "SALES_SQL":
-        return sales_answer(conn, restaurant_id, question, today=kwargs.get("today"))
+        return sales_answer(conn, restaurant_id, question, today=kwargs.get("today"),
+                            naturalizer=kwargs.get("naturalizer"))
     if route == "CROSS_ANALYSIS":
         return cross_answer(conn, restaurant_id, question, **kwargs)
     raise ValueError("Review-only questions must use the unchanged RAG V3 path")

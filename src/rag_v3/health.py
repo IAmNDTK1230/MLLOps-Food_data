@@ -3,6 +3,7 @@
 import json
 import re
 from time import perf_counter
+from types import SimpleNamespace
 
 import requests
 
@@ -25,7 +26,16 @@ def _short_generation(gateway, instruction, version, payload):
 
 def health_report_v3(retriever, gateway, name_or_key):
     started = perf_counter()
-    key, summary = resolve_restaurant(name_or_key)
+    from src.foody.review_runtime import new_corpus_active, review_identity, review_table
+
+    if new_corpus_active():
+        key, _ = review_identity(name_or_key)
+        selected = review_table().loc[lambda rows: rows.restaurant_id.astype(str).eq(key)]
+        summary = SimpleNamespace(review_count=len(selected), average_rating=selected.raw_rating.mean())
+        identity_filter = {"restaurant_id": key}
+    else:
+        key, summary = resolve_restaurant(name_or_key)
+        identity_filter = {"restaurant_key": key}
     instruction, version = prompt("prompts/restaurant_report/health_v3.txt")
     usages = []
     modes = {}
@@ -67,8 +77,8 @@ def health_report_v3(retriever, gateway, name_or_key):
     ):
         answer, hits, telemetry, _, packet = answer_question_v3(
             retriever, gateway,
-            RetrievalRequest(query=query, restaurant_key=key, sentiment=sentiment,
-                             top_k=5),
+            RetrievalRequest(query=query, sentiment=sentiment, top_k=5,
+                             **identity_filter),
         )
         telemetry_parts.append(telemetry)
         section_packets[section] = packet
@@ -151,7 +161,7 @@ def health_report_v3(retriever, gateway, name_or_key):
     record("health_v3_request", gateway.name, gateway.version, version,
            telemetry["end_to_end_latency_ms"], telemetry["status"],
            input_tokens=telemetry["input_tokens"], output_tokens=telemetry["output_tokens"],
-           top_k=5, filters={"restaurant_key": key},
+           top_k=5, filters=identity_filter,
            embedding_model=retriever.metadata.get("model_name"),
            retrieval_latency_ms=telemetry["retrieval_latency_ms"],
            llm_latency_ms=telemetry["llm_latency_ms"],

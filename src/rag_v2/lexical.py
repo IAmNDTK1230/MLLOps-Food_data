@@ -54,19 +54,21 @@ def build_index(source=DOCUMENTS, database=DATABASE, manifest=MANIFEST):
         connection.execute("PRAGMA synchronous=NORMAL")
         connection.execute("CREATE VIRTUAL TABLE reviews_fts USING fts5(review_id UNINDEXED, text, tokenize='unicode61 remove_diacritics 2')")
         connection.execute("""CREATE TABLE reviews (
-            review_id TEXT PRIMARY KEY, restaurant_key TEXT NOT NULL,
+            review_id TEXT PRIMARY KEY, restaurant_key TEXT, restaurant_id TEXT,
             sentiment TEXT, timestamp_epoch INTEGER, metadata_json TEXT NOT NULL
         )""")
         connection.execute("CREATE TABLE review_aspects (review_id TEXT, aspect TEXT, PRIMARY KEY(review_id, aspect))")
         connection.execute("CREATE INDEX reviews_filter ON reviews(restaurant_key, sentiment, timestamp_epoch)")
+        connection.execute("CREATE INDEX reviews_id_filter ON reviews(restaurant_id, sentiment, timestamp_epoch)")
         connection.execute("CREATE INDEX aspects_filter ON review_aspects(aspect, review_id)")
         count = 0
         for doc in read_documents(source):
             metadata = chroma_metadata(doc)
             connection.execute("INSERT INTO reviews_fts(review_id, text) VALUES (?, ?)",
                                (doc["id"], doc["text"]))
-            connection.execute("INSERT INTO reviews VALUES (?, ?, ?, ?, ?)", (
-                doc["id"], metadata["restaurant_key"], metadata["predicted_sentiment"],
+            connection.execute("INSERT INTO reviews VALUES (?, ?, ?, ?, ?, ?)", (
+                doc["id"], metadata.get("restaurant_key"), metadata.get("restaurant_id"),
+                metadata["predicted_sentiment"],
                 metadata.get("timestamp_epoch"), json.dumps(metadata, ensure_ascii=False),
             ))
             connection.executemany("INSERT INTO review_aspects VALUES (?, ?)",
@@ -103,6 +105,9 @@ class BM25Retriever:
         if request.restaurant_key:
             clauses.append("reviews.restaurant_key = ?")
             values.append(request.restaurant_key)
+        if request.restaurant_id:
+            clauses.append("reviews.restaurant_id = ?")
+            values.append(str(request.restaurant_id))
         if request.sentiment:
             clauses.append("reviews.sentiment = ?")
             values.append(request.sentiment)

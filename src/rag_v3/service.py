@@ -5,11 +5,12 @@ import re
 from time import perf_counter
 
 import requests
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from src.rag.monitoring import record
 from src.rag.schemas import Evidence, RetrievalRequest
 from src.rag.service import INSUFFICIENT, prompt
+from src.rag_v2.intent import ASPECT_TERMS
 from src.rag_v3.evidence import (
     build_packet,
     evidence_for_refs,
@@ -113,7 +114,7 @@ def generation_mode_label(mode):
             "none": "Insufficient evidence"}.get(mode, mode)
 
 
-def _repair_instruction(reason):
+def _repair_instruction(reason, aspect=None):
     targeted = {
         "Answer adds off-topic restaurant facts":
             "Chỉ nói về aspect được hỏi; bỏ toàn bộ chi tiết thuộc aspect khác.",
@@ -122,10 +123,20 @@ def _repair_instruction(reason):
         "Complaint answer lacks complaint wording":
             "Nêu đúng phàn nàn cụ thể trong review, không thay bằng nhận xét chung.",
         "Answer clause lacks cited support":
-            "Xóa từng mệnh đề không được chính review gắn citation hỗ trợ.",
+            "Dùng đúng chi tiết và từ đánh giá của review gắn citation. "
+            "Tránh nhận xét chung như 'được đánh giá tốt' nếu review chỉ nói "
+            "'ưng ý' hoặc 'ngon'; xóa mệnh đề không được hỗ trợ.",
         "Unsupported frequency claim":
             "Bỏ các khẳng định về số lượng/tần suất khách hàng.",
+        "schema_validation_failed":
+            "Chỉ trả tối đa 3 claims đúng schema, mỗi claim một nhận định ngắn "
+            "với evidence_refs hợp lệ; không thêm trường khác.",
     }
+    if reason == "Answer does not address requested aspect" and aspect:
+        terms = {"food": "món ăn", "service": "phục vụ", "price": "giá",
+                 "ambiance": "không gian", "cleanliness": "vệ sinh"}
+        return (f"Nêu rõ khía cạnh '{terms[aspect]}' trong claim; chỉ nhắc chi tiết "
+                "mà review gắn citation thực sự nói tới.")
     return targeted.get(reason, "Viết lại ngắn, chỉ với sự kiện được review trích dẫn hỗ trợ.")
 
 
@@ -141,7 +152,24 @@ def _answer_claims(answer, refs, packet, mode):
     ) for sentence in sentences if re.search(r"\[(E\d+)\]", sentence)]
 
 
-def _assemble_analysis(draft, packet):
+def _failure_category(error):
+    """Persist only bounded validation reasons, never generated review text."""
+    if isinstance(error, ValidationError):
+        return "schema_validation_failed"
+    if isinstance(error, ValueError):
+        known = {"Invalid JSON", "Duplicate JSON key",
+                 "Answer adds off-topic restaurant facts",
+                 "Claim has missing or unknown evidence refs",
+                 "Complaint answer lacks complaint wording",
+                 "Answer clause lacks cited support", "Unsupported frequency claim",
+                 "Answer does not address requested aspect",
+                 "Mixed evidence requires a mixed answer",
+                 "Model declared insufficient evidence"}
+        return str(error) if str(error) in known else "invalid_generated_content"
+    return type(error).__name__
+
+
+def _assemble_analysis(draft, packet, aspect=None):
     if draft.insufficient_evidence or not draft.claims:
         raise ValueError("Model declared insufficient evidence")
     known = {item["ref"] for item in packet.evidence}
@@ -158,7 +186,12 @@ def _assemble_analysis(draft, packet):
             raise ValueError("Claim has missing or unknown evidence refs")
         sentences.append(content + " " + "".join(f"[{ref}]" for ref in claim.evidence_refs) + ".")
         refs.extend(claim.evidence_refs)
-    return " ".join(sentences), list(dict.fromkeys(refs))
+    answer = " ".join(sentences)
+    if aspect and not any(term in answer.casefold() for term in ASPECT_TERMS[aspect]):
+        cue = {"food": "món ăn", "service": "phục vụ", "price": "giá",
+               "ambiance": "không gian", "cleanliness": "vệ sinh"}[aspect]
+        answer = f"Về {cue}, {answer[0].lower()}{answer[1:]}"
+    return answer, list(dict.fromkeys(refs))
 
 
 def prepare_question(retriever, request):
@@ -185,15 +218,19 @@ def answer_question_v3(retriever, gateway, request, *, prepared=None,
     failure_category = None
     usages = []
     generation_attempts = 0
+    generation_elapsed_ms = 0.0
+    validation_elapsed_ms = 0.0
+    repair_elapsed_ms = 0.0
     schema_success = False
     citation_success = False
     clause_support_status = "not_checked"
     if packet.support_gate_status == "ACCEPTED":
         rejected_answer = ""
         for attempt in range(2):
+            attempt_started = perf_counter()
             generation_attempts += 1
             correction = ("\nBản trước bị từ chối. KHÔNG lặp lại nguyên văn. "
-                          + _repair_instruction(failure_category)
+                          + _repair_instruction(failure_category, route.aspect)
                           + " Mỗi claim có evidence_refs; chỉ dùng nội dung review đó hỗ trợ."
                           if attempt else "")
             payload = packet.generation_payload(request.query)
@@ -201,24 +238,30 @@ def answer_question_v3(retriever, gateway, request, *, prepared=None,
                 payload["repair"] = {"rejected_answer": rejected_answer,
                                      "validation_failure": failure_category}
             attempt_audit = []
+            validation_started = None
             try:
-                raw, usage = gateway.generate(
-                    system=instruction + correction,
-                    user=json.dumps(payload, ensure_ascii=False),
-                    response_schema=V3AnalysisDraft.model_json_schema(),
-                    prompt_version=version, max_new_tokens=192,
-                    component="rag_v3_generation",
-                    audit_sink=attempt_audit,
-                )
+                generation_started = perf_counter()
+                try:
+                    raw, usage = gateway.generate(
+                        system=instruction + correction,
+                        user=json.dumps(payload, ensure_ascii=False),
+                        response_schema=V3AnalysisDraft.model_json_schema(),
+                        prompt_version=version, max_new_tokens=192,
+                        component="rag_v3_generation",
+                        audit_sink=attempt_audit,
+                    )
+                finally:
+                    generation_elapsed_ms += (perf_counter() - generation_started) * 1000
                 if generation_audit is not None:
                     generation_audit.append({"attempt": attempt + 1,
                                              "gateway": attempt_audit,
                                              "parsed_output": raw})
                 usages.append(usage)
+                validation_started = perf_counter()
                 draft = V3AnalysisDraft.model_validate(raw)
                 schema_success = True
                 rejected_answer = " ".join(claim.text for claim in draft.claims)[:600]
-                cited_answer, cited_refs = _assemble_analysis(draft, packet)
+                cited_answer, cited_refs = _assemble_analysis(draft, packet, route.aspect)
                 rejected_answer = cited_answer[:600]
                 validate_packet_citations(cited_answer, cited_refs,
                                           packet, hits, route, request.query)
@@ -231,14 +274,18 @@ def answer_question_v3(retriever, gateway, request, *, prepared=None,
             except (ValueError, KeyError, TypeError, requests.RequestException) as error:
                 if attempt_audit and not rejected_answer:
                     rejected_answer = attempt_audit[0].get("raw_output", "")[:600]
-                failure_category = (str(error)[:120] if isinstance(error, ValueError)
-                                    else type(error).__name__)
+                failure_category = _failure_category(error)
                 clause_support_status = "failed" if schema_success else "not_checked"
                 if generation_audit is not None:
                     if len(generation_audit) < attempt + 1:
                         generation_audit.append({"attempt": attempt + 1,
                                                  "gateway": attempt_audit})
                     generation_audit[-1]["failure"] = failure_category
+            finally:
+                if validation_started is not None:
+                    validation_elapsed_ms += (perf_counter() - validation_started) * 1000
+                if attempt:
+                    repair_elapsed_ms += (perf_counter() - attempt_started) * 1000
         if mode != "qwen":
             answer, refs = extractive_answer(packet)
             # Extractive text comes directly from a known review, but IDs must still map.
@@ -256,7 +303,9 @@ def answer_question_v3(retriever, gateway, request, *, prepared=None,
     )
     telemetry = {
         "retrieval_latency_ms": retrieval_ms,
-        "llm_latency_ms": sum(item["latency_ms"] for item in usages) if usages else None,
+        "llm_latency_ms": generation_elapsed_ms if generation_attempts else None,
+        "validation_latency_ms": validation_elapsed_ms if generation_attempts else None,
+        "repair_latency_ms": repair_elapsed_ms if generation_attempts > 1 else None,
         "end_to_end_latency_ms": (perf_counter() - started) * 1000
         + (retrieval_ms if prepared is not None else 0),
         "input_tokens": sum(item["input_tokens"] or 0 for item in usages)
@@ -292,5 +341,9 @@ def answer_question_v3(retriever, gateway, request, *, prepared=None,
            generation_model=gateway.name, generation_mode=mode,
            evidence_count=len(cited_hits),
            support_gate_status=packet.support_gate_status,
-           clause_support_status=clause_support_status)
+           clause_support_status=clause_support_status,
+           validation_latency_ms=telemetry["validation_latency_ms"],
+           repair_latency_ms=telemetry["repair_latency_ms"],
+           generation_attempts=generation_attempts,
+           failure_category=failure_category)
     return response, hits, telemetry, debug, packet

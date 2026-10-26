@@ -1,4 +1,4 @@
-"""Optional backend for Docker/API users; all heavyweight services load per request."""
+"""Optional backend for Docker/API users with a shared review retriever."""
 
 import json
 import os
@@ -50,6 +50,9 @@ def version():
     embedding = json.loads(embedding_path.read_text(encoding="utf-8")) if embedding_path.exists() else {}
     qwen_path = Path(demo["qwen_provenance"])
     qwen = json.loads(qwen_path.read_text(encoding="utf-8")) if qwen_path.exists() else {}
+    from src.foody.review_runtime import active_manifest, new_corpus_active
+
+    review = active_manifest()
     sha = os.getenv("GIT_SHA")
     if not sha and Path(".git").exists():
         sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
@@ -60,7 +63,10 @@ def version():
             "rag_version": demo["rag_version"], "prompt_id": demo["prompt_version"],
             "sentiment_sha256": versions.get("sentiment_model_sha256"),
             "aspect_sha256": versions.get("aspect_model_sha256"),
-            "dataset_sha256": versions.get("source_sha256"),
+            "dataset_sha256": (review.get("source_sha256") if new_corpus_active() else
+                               versions.get("source_sha256")),
+            "review_data_version": review.get("data_version", "legacy"),
+            "review_count": review.get("row_count", review.get("document_count")),
             "embedding_model": demo["embedding_model"],
             "embedding_revision": embedding.get("revision"),
             "embedding_sha256": embedding.get("model_hash"),
@@ -72,17 +78,21 @@ def version():
 def ask_v3(body: Question):
     """Monitor the accepted V3 service without changing its retrieval/answer logic."""
     try:
+        from src.foody.review_runtime import new_corpus_active, review_identity
         from src.rag.schemas import RetrievalRequest
         from src.rag.service import resolve_restaurant
         from src.rag_v3.cli import selected_v3_gateway
-        from src.rag_v3.retriever import RoutedRetriever
+        from src.rag_v3.retriever import cached_retriever
         from src.rag_v3.service import answer_question_v3
 
-        key = resolve_restaurant(body.restaurant)[0] if body.restaurant else None
+        key = (review_identity(body.restaurant)[0] if new_corpus_active() else
+               resolve_restaurant(body.restaurant)[0]) if body.restaurant else None
         with selected_v3_gateway() as gateway:
             answer, hits, telemetry, _, _ = answer_question_v3(
-                RoutedRetriever(), gateway,
-                RetrievalRequest(query=body.question, restaurant_key=key, top_k=body.top_k),
+                cached_retriever(), gateway,
+                RetrievalRequest(query=body.question, top_k=body.top_k,
+                                 **({"restaurant_id": key} if new_corpus_active() else
+                                    {"restaurant_key": key})),
             )
         observe_rag(telemetry)
         return {"response": answer.model_dump(),
@@ -94,24 +104,31 @@ def ask_v3(body: Question):
 
 @api.get("/health")
 def health():
+    from src.foody.review_runtime import VECTOR, new_corpus_active
+
+    vector = VECTOR if new_corpus_active() else Path("data/foody/vector_store")
     return {"status": "ready", "vector_index_available": Path(
-        "data/foody/vector_store/index_manifest.json").exists(),
+        vector / "index_manifest.json").exists(),
         "qwen_weights_available": Path("models/qwen_v1/qwen2.5-1.5b-instruct-q4_k_m.gguf").exists()}
 
 
 @api.post("/ask")
 def ask(body: Question):
     try:
+        from src.foody.review_runtime import new_corpus_active, review_identity
         from src.llm.gateway import LLMGateway
         from src.rag.cli import selected_retriever
         from src.rag.schemas import RetrievalRequest
         from src.rag.service import answer_question, resolve_restaurant
 
-        key = resolve_restaurant(body.restaurant)[0] if body.restaurant else None
+        key = (review_identity(body.restaurant)[0] if new_corpus_active() else
+               resolve_restaurant(body.restaurant)[0]) if body.restaurant else None
         with LLMGateway() as gateway:
             answer, hits, telemetry = answer_question(
                 selected_retriever(), gateway,
-                RetrievalRequest(query=body.question, restaurant_key=key, top_k=body.top_k),
+                RetrievalRequest(query=body.question, top_k=body.top_k,
+                                 **({"restaurant_id": key} if new_corpus_active() else
+                                    {"restaurant_key": key})),
             )
         return {"response": answer.model_dump(), "retrieved": [hit.model_dump() for hit in hits],
                 "telemetry": telemetry}

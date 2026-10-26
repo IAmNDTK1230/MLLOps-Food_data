@@ -46,7 +46,9 @@ def effective_request(request, intent, auto_filter):
 
 def _matches(hit, request):
     meta = hit.metadata
-    if request.restaurant_key and meta["restaurant_key"] != request.restaurant_key:
+    if request.restaurant_id and meta.get("restaurant_id") != str(request.restaurant_id):
+        return False
+    if request.restaurant_key and meta.get("restaurant_key") != request.restaurant_key:
         return False
     if request.sentiment and meta["predicted_sentiment"] != request.sentiment:
         return False

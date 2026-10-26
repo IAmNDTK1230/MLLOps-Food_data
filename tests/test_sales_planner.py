@@ -66,11 +66,11 @@ def test_invalid_or_unbounded_comparison_rejected(question):
     ("question", "field", "first", "second", "expected"),
     [
         ("doanh thu tháng 2 với tháng 3 năm 2026", "delivered_sales",
-         Decimal("1200000"), Decimal("1000000"), "+200,000 VND"),
+         Decimal("1200000"), Decimal("1000000"), "cao hơn tháng 3/2026 (1.000.000 ₫) 200.000 ₫"),
         ("AOV tháng 2 với tháng 3 năm 2026", "aov",
-         Decimal("120000"), Decimal("100000"), "+20,000 VND"),
+         Decimal("120000"), Decimal("100000"), "cao hơn tháng 3/2026 (100.000 ₫) 20.000 ₫"),
         ("tỷ lệ hủy tháng 2 với tháng 3 năm 2026", "cancellation_rate",
-         Decimal("0.15"), Decimal("0.10"), "+5.00 điểm phần trăm"),
+         Decimal("0.15"), Decimal("0.10"), "5,00 điểm phần trăm"),
     ],
 )
 def test_comparison_uses_two_exact_monthly_sql_facts(
@@ -117,4 +117,4 @@ def test_zero_reference_does_not_divide_by_zero(monkeypatch):
         object(), "R1", {"restaurant_name": "Example"}, plan,
         today=date(2026, 10, 25))
     assert result["status"] == "ok"
-    assert "không tính được tỷ lệ" in result["answer"]
+    assert "Không tính tỷ lệ thay đổi" in result["answer"]

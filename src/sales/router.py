@@ -20,7 +20,7 @@ def route_question(question):
     value = _plain(question)
     sales = any(_plain(term) in value for term in SALES)
     reviews = any(_plain(term) in value for term in REVIEWS)
-    if sales and (reviews or "tai sao" in value or "vi sao" in value):
+    if sales and reviews:
         return "CROSS_ANALYSIS"
     if sales:
         return "SALES_SQL"
@@ -28,8 +28,28 @@ def route_question(question):
 
 
 def month_in_question(question):
-    found = re.search(r"\b(20\d{2})[-/](0?[1-9]|1[0-2])\b", question)
-    return f"{found.group(1)}-{int(found.group(2)):02d}" if found else None
+    period = parse_requested_period(question)
+    return f"{period['year']}-{period['month']:02d}" if period["explicit"] else None
+
+
+def parse_requested_period(question):
+    """Read an explicit month and year without guessing from the sales data."""
+    value = _plain(question)
+    patterns = (
+        (r"\b(20\d{2})[-/](\d{1,2})\b", "year_month"),
+        (r"\b(?:thang\s*)?(\d{1,2})\s*/\s*(20\d{2})\b", "month_year"),
+        (r"\b(?:thang|month)\s+(\d{1,2})\s+(?:nam|year)\s+(20\d{2})\b",
+         "month_year"),
+    )
+    for pattern, order in patterns:
+        found = re.search(pattern, value)
+        if found:
+            year, month = (map(int, found.groups()) if order == "year_month"
+                           else reversed(tuple(map(int, found.groups()))))
+            if not 1 <= month <= 12:
+                raise ValueError("Tháng không hợp lệ; vui lòng nhập tháng từ 1 đến 12.")
+            return {"year": year, "month": month, "explicit": True}
+    return {"year": None, "month": None, "explicit": False}
 
 
 def wants_current_month(question):

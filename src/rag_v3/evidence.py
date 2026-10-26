@@ -79,6 +79,8 @@ def build_packet(request, hits, route, *, max_evidence=3):
         "aspects": _metadata_list(hit.metadata.get("predicted_aspects")),
         "issues": _metadata_list(hit.metadata.get("detected_issues")),
         "rating": hit.metadata.get("raw_rating"),
+        "date": hit.metadata.get("review_timestamp"),
+        "source": hit.metadata.get("source"),
         "text": _packet_text(hit.text, route.intent),
     } for index, hit in enumerate(selected, 1))
     sentiments = {item["sentiment"] for item in packet_evidence}

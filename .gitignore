@@ -35,6 +35,11 @@ reports/**
 !reports/sales/
 !reports/sales/*.md
 !reports/sales/*.json
+!reports/review/
+!reports/review/*.md
+!reports/review/*.json
+!reports/rag/
+!reports/rag/review_2025_2026_known_relevance.json
 !reports/task2/
 !reports/task2/figures/
 !reports/task2/*.md

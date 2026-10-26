@@ -44,7 +44,7 @@ def test_api_exposes_bounded_metrics_and_versions():
     assert "foody_api_request_duration_seconds" in response.text
     version = client.get("/version")
     assert version.status_code == 200
-    assert version.json()["warehouse_schema_version"] == "003"
+    assert version.json()["warehouse_schema_version"] == "004"
     assert "qwen_model" in version.json()
 
 

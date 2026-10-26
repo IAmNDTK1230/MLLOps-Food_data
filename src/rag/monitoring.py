@@ -16,7 +16,9 @@ def record(component, model_name, model_version, prompt_version, latency_ms, sta
            retrieval_version=None, retrieval_method=None, reranker_model=None,
            candidate_count=None, final_top_k=None, rag_version=None,
            query_route=None, generation_model=None, generation_mode=None,
-           evidence_count=None, support_gate_status=None, clause_support_status=None):
+           evidence_count=None, support_gate_status=None, clause_support_status=None,
+           validation_latency_ms=None, repair_latency_ms=None,
+           generation_attempts=None, failure_category=None):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     safe_filters = {key: value for key, value in (filters or {}).items() if key in {
@@ -42,6 +44,8 @@ def record(component, model_name, model_version, prompt_version, latency_ms, sta
             ("generation_model", "TEXT"), ("generation_mode", "TEXT"),
             ("evidence_count", "INTEGER"), ("support_gate_status", "TEXT"),
             ("clause_support_status", "TEXT"),
+            ("validation_latency_ms", "REAL"), ("repair_latency_ms", "REAL"),
+            ("generation_attempts", "INTEGER"), ("failure_category", "TEXT"),
         ):
             if name not in columns:
                 connection.execute(f"ALTER TABLE events ADD COLUMN {name} {kind}")
@@ -51,8 +55,9 @@ def record(component, model_name, model_version, prompt_version, latency_ms, sta
             embedding_model, retrieval_latency_ms, llm_latency_ms, end_to_end_latency_ms,
             schema_valid, retrieval_version, retrieval_method, reranker_model,
             candidate_count, final_top_k, rag_version, query_route, generation_model,
-            generation_mode, evidence_count, support_gate_status, clause_support_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
+            generation_mode, evidence_count, support_gate_status, clause_support_status,
+            validation_latency_ms, repair_latency_ms, generation_attempts, failure_category
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
             datetime.now(UTC).isoformat(), component, model_name, model_version,
             prompt_version, float(latency_ms), input_tokens, output_tokens, status,
             top_k, json.dumps(safe_filters, sort_keys=True, default=str), prediction, confidence,
@@ -61,6 +66,7 @@ def record(component, model_name, model_version, prompt_version, latency_ms, sta
             retrieval_version, retrieval_method, reranker_model, candidate_count,
             final_top_k, rag_version, query_route, generation_model, generation_mode,
             evidence_count, support_gate_status, clause_support_status,
+            validation_latency_ms, repair_latency_ms, generation_attempts, failure_category,
         ))
 
 

@@ -7,21 +7,25 @@ CSS = """
 :root {color-scheme: dark;}
 .stApp {background: #0E1117; color: #F1F5F9;}
 [data-testid="stSidebar"] {background: #151B24; border-right: 1px solid #2A3442;}
+[data-testid="stSidebar"] p, [data-testid="stSidebar"] label,
+[data-testid="stSidebar"] span {color: #CBD5E1 !important;}
+[data-testid="stWidgetLabel"] p {color: #B8C5D6 !important;}
 [data-testid="stSidebar"] .stRadio > label {display: none;}
 [data-testid="stSidebar"] [role="radiogroup"] {gap: .36rem;}
 [data-testid="stSidebar"] [role="radio"] {padding: .48rem .7rem; border-radius: .65rem;}
 [data-testid="stSidebar"] [role="radio"]:has(input:checked) {background: #253857;}
-.block-container {max-width: 1380px; padding-top: 1.8rem; padding-bottom: 3rem;}
+.block-container {max-width: 1320px; padding-top: 1.2rem; padding-bottom: 2.5rem;}
 h1,h2,h3 {letter-spacing: -.025em; color: #F1F5F9;}
 h1 {font-size: 2.15rem !important; font-weight: 750 !important;}
-h2 {font-size: 1.35rem !important; margin-top: 1.25rem !important;}
+h2 {font-size: 1.35rem !important; margin-top: 1.05rem !important;}
 h3 {font-size: 1.08rem !important;}
 [data-testid="stVerticalBlockBorderWrapper"] {background: #161B22; border-color: #2A3442 !important; border-radius: .85rem;}
-[data-testid="stMetric"] {background: #1A202C; border: 1px solid #2A3442; border-radius: .85rem; padding: 1rem; min-height: 116px;}
+[data-testid="stMetric"] {background: #1A202C; border: 1px solid #2A3442; border-radius: .9rem; padding: .85rem 1rem; min-height: 108px;}
 [data-testid="stMetricLabel"] {color: #9AA4B2;}
-[data-testid="stMetricValue"] {font-weight: 720; letter-spacing: -.03em;}
+[data-testid="stMetricValue"], [data-testid="stMetricValue"] * {color: #F1F5F9 !important; font-size: 1.55rem !important; font-weight: 720; letter-spacing: -.03em;}
+[data-testid="stMetricDelta"], [data-testid="stMetricDelta"] * {font-size: .76rem !important;}
 [data-testid="stDataFrame"] {border: 1px solid #2A3442; border-radius: .7rem; overflow: hidden;}
-.foody-hero {padding: 1.15rem 1.3rem; background: linear-gradient(120deg,#1B2940,#161B22 65%); border: 1px solid #32425A; border-radius: 1rem; margin-bottom: 1.25rem;}
+.foody-hero {padding: 1.15rem 1.3rem; background: linear-gradient(120deg,#1B2940,#161B22 65%); border: 1px solid #32425A; border-radius: 1rem; margin-bottom: .9rem;}
 .foody-eyebrow {font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; color: #82ABF2; font-weight: 700; margin-bottom: .3rem;}
 .foody-hero h1 {margin: 0 0 .25rem 0;}
 .foody-muted {color: #9AA4B2; font-size: .9rem; margin: .2rem 0;}
@@ -29,15 +33,21 @@ h3 {font-size: 1.08rem !important;}
 .foody-badge.good {background: #15352B; border-color: #286A50; color: #93E5B8;}
 .foody-badge.warn {background: #382D1D; border-color: #77602B; color: #F5D38A;}
 .foody-badge.muted {background: #252C36; border-color: #3E4855; color: #B2BDCA;}
-.foody-card {background: #161B22; border: 1px solid #2A3442; border-radius: .85rem; padding: 1rem 1.15rem; margin: .35rem 0 .8rem;}
+.foody-card {background: #1A202C; border: 1px solid #303B4B; border-radius: .9rem; padding: 1rem 1.15rem; margin: .3rem 0 .7rem;}
 .foody-card h3 {margin: 0 0 .45rem;}
 .foody-card p {margin: .25rem 0; line-height: 1.55;}
 .foody-empty {background: #1A202C; border: 1px dashed #435064; border-radius: .85rem; padding: 1rem 1.2rem; color: #CBD5E1;}
 .foody-empty strong {display: block; color: #F1F5F9; margin-bottom: .2rem;}
-.foody-answer {border-left: 3px solid #4F8EF7;}
+.foody-answer {background: linear-gradient(110deg,#20253D,#1A202C 68%); border-left: 3px solid #8B8CF8;}
 .foody-section-note {font-size: .84rem; color: #9AA4B2; margin-top: -.35rem; margin-bottom: .6rem;}
 div.stButton > button {border-radius: .55rem; border-color: #3A4E69;}
 div.stButton > button[kind="primary"] {background: #4F8EF7; border-color: #4F8EF7; color: #0E1117;}
+[data-testid="stTextInput"] input {background: #1A202C; color: #F1F5F9; border-color: #39465B; border-radius: .65rem; min-height: 2.65rem;}
+[data-testid="stTextInput"] input::placeholder {color: #97A7BA; opacity: 1;}
+[data-testid="stTextInput"] input:focus {border-color: #8B8CF8; box-shadow: 0 0 0 1px #8B8CF8;}
+[data-baseweb="select"] > div {background: #1A202C !important; border-color: #39465B !important;}
+[data-baseweb="select"] * {color: #F1F5F9 !important;}
+[data-testid="stDateInput"] input {background: #1A202C !important; color: #F1F5F9 !important; border-color: #39465B !important;}
 </style>
 """
 

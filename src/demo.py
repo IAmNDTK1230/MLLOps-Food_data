@@ -28,6 +28,9 @@ def _parquet_rows(path):
 def demo_preflight(config_path=CONFIG):
     """Inspect frozen artifacts without inference, training, indexing, or writes."""
     config = demo_config(config_path)
+    from src.foody.review_runtime import LEXICAL, VECTOR, new_corpus_active
+
+    new_reviews = new_corpus_active()
     checks = {}
     details = {}
 
@@ -40,6 +43,18 @@ def demo_preflight(config_path=CONFIG):
             details[label] = type(error).__name__ + ": " + str(error)[:180]
 
     def foody():
+        if new_reviews:
+            from src.foody.review_paths import ENRICHED as NEW_ENRICHED
+            from src.foody.review_paths import MANIFEST as NEW_MANIFEST
+            from src.foody.review_paths import SOURCE as NEW_SOURCE
+
+            manifest = _json(NEW_MANIFEST)
+            if digest(NEW_SOURCE) != manifest["source_sha256"]:
+                raise ValueError("New review source differs from accepted manifest")
+            rows = _parquet_rows(NEW_ENRICHED)
+            if rows != manifest["row_count"]:
+                raise ValueError("New enriched review count differs from accepted manifest")
+            return {"reviews": rows, "ai_valid": manifest["sentiment_enrichment_count"]}
         enrichment = _json("reports/foody_intelligence/enrichment.json")
         source = SOURCE
         if not source.is_file() or source.stat().st_size == 0:
@@ -69,7 +84,8 @@ def demo_preflight(config_path=CONFIG):
     def chroma():
         from src.rag.vector_store import open_collection
 
-        collection, manifest = open_collection()
+        collection, manifest = (open_collection(VECTOR / "index_manifest.json", VECTOR)
+                                if new_reviews else open_collection())
         if manifest["collection"] != config["vector_collection"]:
             raise ValueError("Active vector collection differs from demo config")
         if manifest["model_name"] != config["embedding_model"]:
@@ -79,8 +95,9 @@ def demo_preflight(config_path=CONFIG):
     check("Chroma", chroma)
 
     def bm25():
-        manifest = _json("data/foody/lexical_index/index_manifest.json")
-        database = Path("data/foody/lexical_index/reviews.sqlite")
+        root = LEXICAL if new_reviews else Path("data/foody/lexical_index")
+        manifest = _json(root / "index_manifest.json")
+        database = root / "reviews.sqlite"
         if not database.is_file():
             raise ValueError("BM25 database missing")
         with sqlite3.connect(f"file:{database.resolve().as_posix()}?mode=ro", uri=True) as db:
@@ -113,6 +130,12 @@ def demo_preflight(config_path=CONFIG):
     check("Qwen 3B", qwen)
 
     def marts():
+        if new_reviews:
+            from src.foody.review_paths import MANIFEST as NEW_MANIFEST
+
+            manifest = _json(NEW_MANIFEST)
+            return {"restaurants": manifest["restaurant_count"],
+                    "tables": {"enriched_reviews": manifest["row_count"]}}
         paths = ["restaurant_summary", "restaurant_monthly_metrics",
                  "restaurant_aspect_summary", "restaurant_issue_summary", "alerts"]
         rows = {name: _parquet_rows(f"data/foody/mart/{name}.parquet") for name in paths}
@@ -134,7 +157,8 @@ def demo_preflight(config_path=CONFIG):
     check("Streamlit import", lambda: {"installed": True} if
           importlib.util.find_spec("streamlit") else _missing_streamlit())
     try:
-        rag_manifest = _json("data/foody/vector_store/index_manifest.json")
+        rag_manifest = _json((VECTOR if new_reviews else
+                              Path("data/foody/vector_store")) / "index_manifest.json")
     except (OSError, ValueError):
         rag_manifest = {}
     return {"checks": checks, "details": details,

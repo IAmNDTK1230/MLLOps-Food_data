@@ -29,6 +29,15 @@ def _date(month):
 
 
 def restaurant(conn, restaurant_id):
+    from src.foody.review_runtime import new_corpus_active
+
+    if new_corpus_active():
+        return _row(conn.execute("""SELECT d.restaurant_id,d.restaurant_name,
+            NULL::text AS restaurant_key,r.restaurant_id AS review_restaurant_id,
+            r.restaurant_name AS review_restaurant_name
+            FROM dim_sales_restaurant d
+            LEFT JOIN dim_review_restaurant_v2 r USING (restaurant_id)
+            WHERE d.restaurant_id=%s""", (str(restaurant_id),)))
     return _row(conn.execute("""SELECT d.restaurant_id,d.restaurant_name,
         m.restaurant_key,r.restaurant_name AS review_restaurant_name
         FROM dim_sales_restaurant d
@@ -38,6 +47,15 @@ def restaurant(conn, restaurant_id):
 
 
 def list_restaurants(conn, *, matched_only=False):
+    from src.foody.review_runtime import new_corpus_active
+
+    if new_corpus_active():
+        where = "WHERE r.restaurant_id IS NOT NULL" if matched_only else ""
+        return _rows(conn.execute(f"""SELECT d.restaurant_id,d.restaurant_name,
+            NULL::text AS restaurant_key,r.restaurant_id AS review_restaurant_id
+            FROM dim_sales_restaurant d LEFT JOIN dim_review_restaurant_v2 r
+            USING (restaurant_id) {where}
+            ORDER BY d.restaurant_name NULLS LAST,d.restaurant_id"""))
     where = "WHERE m.restaurant_key IS NOT NULL" if matched_only else ""
     return _rows(conn.execute(f"""SELECT d.restaurant_id,d.restaurant_name,m.restaurant_key
         FROM dim_sales_restaurant d LEFT JOIN sales_review_restaurant_map m USING (restaurant_id)

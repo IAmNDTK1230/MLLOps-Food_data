@@ -11,6 +11,8 @@ from src.rag.vector_store import epoch, open_collection
 
 def where_filter(request):
     parts = []
+    if request.restaurant_id:
+        parts.append({"restaurant_id": str(request.restaurant_id)})
     if request.restaurant_key:
         parts.append({"restaurant_key": request.restaurant_key})
     if request.sentiment:
@@ -58,7 +60,8 @@ class Retriever:
             found["ids"][0], found["documents"][0], found["metadatas"][0],
             found["distances"][0], strict=True,
         ):
-            if (request.restaurant_key and meta["restaurant_key"] != request.restaurant_key) or (
+            if (request.restaurant_id and meta.get("restaurant_id") != str(request.restaurant_id)) or (
+                request.restaurant_key and meta.get("restaurant_key") != request.restaurant_key) or (
                 request.sentiment and meta["predicted_sentiment"] != request.sentiment
             ) or (request.aspect and request.aspect not in json.loads(meta["predicted_aspects"])):
                 raise ValueError("Chroma returned a document outside requested filters")

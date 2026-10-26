@@ -10,15 +10,24 @@ from scripts.evaluate_rag_v3_generation import load_frozen_packets
 from src.rag.monitoring import record
 from src.rag.schemas import RetrievalRequest, ReviewHit
 from src.rag.service import INSUFFICIENT
+from src.rag_v3 import retriever as retriever_module
 from src.rag_v3.evidence import build_packet, validate_packet_citations
 from src.rag_v3.health import health_report_v3
 from src.rag_v3.routing import route_query
 from src.rag_v3.service import (
+    V3AnalysisDraft,
     V3Draft,
+    _assemble_analysis,
     answer_question_v3,
     attach_citation,
     generation_mode_label,
 )
+
+
+@pytest.fixture(autouse=True)
+def synthetic_legacy_restaurant_keys(monkeypatch):
+    """These frozen synthetic V3 fixtures intentionally use legacy key-a IDs."""
+    monkeypatch.setenv("FOODY_REVIEW_CORPUS", "legacy")
 
 
 def hit(review_id, text, sentiment="negative", aspects=("service",)):
@@ -131,6 +140,45 @@ def test_multi_evidence_synthesis_maps_atomic_claims_to_real_reviews():
     assert packet.evidence[0]["ref"] == "E1"
 
 
+def test_packet_preserves_review_date_rating_and_source_for_cross_synthesis():
+    review = hit("food-1", "Món ăn ngon", sentiment="positive", aspects=("food",))
+    review.metadata.update({"review_timestamp": "2025-05-12T14:00:00",
+                            "source": "foody", "raw_rating": "6.8"})
+    request = RetrievalRequest(query="Món ăn nào nổi bật?")
+    packet = build_packet(request, [review], route_query(request.query))
+    entry = packet.generation_payload(request.query)["evidence"][0]
+    assert entry["date"] == "2025-05-12T14:00:00"
+    assert entry["rating"] == "6.8"
+    assert entry["source"] == "foody"
+
+
+def test_retriever_is_initialized_once_per_process(monkeypatch):
+    made = []
+    monkeypatch.setattr(retriever_module, "RoutedRetriever", lambda: made.append(object()) or made[-1])
+    retriever_module.cached_retriever.cache_clear()
+    try:
+        assert retriever_module.cached_retriever() is retriever_module.cached_retriever()
+        assert len(made) == 1
+    finally:
+        retriever_module.cached_retriever.cache_clear()
+
+
+def test_aspect_cue_does_not_bypass_claim_support_gate():
+    review = hit("food-1", "Món ăn có kimchi và canh, khách rất ưng ý",
+                 sentiment="positive", aspects=("food",))
+    request = RetrievalRequest(query="Món ăn nào nổi bật?")
+    route = route_query(request.query)
+    packet = build_packet(request, [review], route)
+    draft = V3AnalysisDraft.model_validate({
+        "claims": [{"text": "Kimchi và canh được đánh giá tốt", "evidence_refs": ["E1"]}],
+        "insufficient_evidence": False,
+    })
+    answer, refs = _assemble_analysis(draft, packet, route.aspect)
+    assert answer.startswith("Về món ăn, ")
+    with pytest.raises(ValueError, match="Answer clause lacks cited support"):
+        validate_packet_citations(answer, refs, packet, [review], route, request.query)
+
+
 def test_repair_receives_rejected_answer_and_failure_reason():
     review = hit("slow", "Nhân viên phục vụ chậm, khách phải chờ lâu")
     rejected = "Nhiều khách phàn nàn nhân viên phục vụ chậm [E1]."
@@ -146,6 +194,8 @@ def test_repair_receives_rejected_answer_and_failure_reason():
     )
     assert response.generation_mode == "qwen"
     assert telemetry["generation_attempts"] == 2
+    assert telemetry["validation_latency_ms"] >= 0
+    assert telemetry["repair_latency_ms"] >= 0
     repair = json.loads(gateway.requests[1]["user"])["repair"]
     assert repair["rejected_answer"] == rejected
     assert repair["validation_failure"] == "Unsupported frequency claim"
@@ -167,6 +217,24 @@ def test_invalid_json_retry_receives_raw_rejected_output():
     repair = json.loads(gateway.requests[1]["user"])["repair"]
     assert repair == {"rejected_answer": "{invalid-json",
                       "validation_failure": "Invalid JSON"}
+
+
+def test_four_claim_schema_failure_gets_bounded_repair_instruction():
+    review = hit("slow", "Nhân viên phục vụ chậm, khách phải chờ lâu")
+    claim = {"text": "Nhân viên phục vụ chậm", "evidence_refs": ["E1"]}
+    gateway = SequenceGateway([
+        {"claims": [claim] * 4, "insufficient_evidence": False},
+        {"claims": [claim], "insufficient_evidence": False},
+    ])
+    response, _, telemetry, _, _ = answer_question_v3(
+        FakeRetriever([review]), gateway,
+        RetrievalRequest(query="Nhân viên phục vụ có vấn đề gì không?"),
+    )
+    assert response.generation_mode == "qwen"
+    assert telemetry["generation_attempts"] == 2
+    assert json.loads(gateway.requests[1]["user"])["repair"]["validation_failure"] == \
+        "schema_validation_failed"
+    assert "tối đa 3 claims" in gateway.requests[1]["system"]
 
 
 def test_two_rejected_attempts_still_use_verified_extractive_fallback():
@@ -453,12 +521,16 @@ def test_llmops_v3_columns_and_no_raw_content(tmp_path):
            clause_support_status="extractive_verified",
            retrieval_method="RAG_V3_BM25_FILTERED", retrieval_latency_ms=3,
            llm_latency_ms=2, end_to_end_latency_ms=12,
+           validation_latency_ms=1, repair_latency_ms=4,
+           generation_attempts=2, failure_category="Unsupported frequency claim",
            input_tokens=10, output_tokens=5)
     with sqlite3.connect(path) as connection:
         row = connection.execute("SELECT rag_version, query_route, generation_model, "
                                  "generation_mode, evidence_count, support_gate_status, "
                                  "clause_support_status, "
-                                 "filters_json FROM events").fetchone()
+                                 "filters_json, validation_latency_ms, repair_latency_ms, "
+                                 "generation_attempts, failure_category FROM events").fetchone()
     assert row[:7] == ("RAG_V3", "FOOD_COMPLAINT", "Qwen-test",
                        "extractive_fallback", 1, "ACCEPTED", "extractive_verified")
     assert "secret question" not in row[7]
+    assert row[8:] == (1, 4, 2, "Unsupported frequency claim")

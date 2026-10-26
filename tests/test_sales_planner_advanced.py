@@ -33,11 +33,11 @@ def test_max_and_min_month_in_year(monkeypatch):
         monkeypatch, "tháng nào doanh thu cao nhất năm 2026", values)
     assert maximum["query_plan"]["intent"] == "MAX_MIN_PERIOD"
     assert maximum["query_plan"]["aggregation"] == "max"
-    assert "2026-09: 900 VND" in maximum["answer"]
+    assert "tháng 9/2026 có doanh thu cao nhất với 900 ₫" in maximum["answer"]
     assert requested == list(values)
-    assert "chỉ các tháng đã hoàn thành" in maximum["answer"]
+    assert "Chỉ tính các tháng đã hoàn thành" in maximum["answer"]
     minimum, _ = _run(monkeypatch, "tháng nào doanh thu thấp nhất năm 2026", values)
-    assert "2026-01: 100 VND" in minimum["answer"]
+    assert "tháng 1/2026 có doanh thu thấp nhất với 100 ₫" in minimum["answer"]
 
 
 def test_six_completed_month_trend(monkeypatch):
@@ -47,8 +47,8 @@ def test_six_completed_month_trend(monkeypatch):
     assert result["query_plan"]["range"] == {
         "start": "2026-04", "end": "2026-09"}
     assert requested == list(values)
-    assert "2026-04: 400 VND" in result["answer"]
-    assert "2026-09: 900 VND" in result["answer"]
+    assert "tháng 4/2026 (400 ₫)" in result["answer"]
+    assert "tháng 9/2026 (900 ₫)" in result["answer"]
 
 
 def test_explicit_range_trend(monkeypatch):
@@ -64,12 +64,12 @@ def test_range_and_quarter_total(monkeypatch):
     result, requested = _run(
         monkeypatch, "tổng doanh thu từ tháng 1 đến tháng 6 năm 2026", values)
     assert result["query_plan"]["intent"] == "RANGE_AGGREGATE"
-    assert "2,100 VND" in result["answer"]
+    assert "2.100 ₫" in result["answer"]
     assert requested == list(values)
     quarter, requested = _run(monkeypatch, "tổng doanh thu quý 1 năm 2026", values)
     assert quarter["query_plan"]["range"] == {
         "start": "2026-01", "end": "2026-03"}
-    assert "600 VND" in quarter["answer"]
+    assert "600 ₫" in quarter["answer"]
     assert requested == list(values)[:3]
 
 
@@ -77,13 +77,13 @@ def test_yearly_total_and_monthly_average(monkeypatch):
     year_2025 = {f"2025-{month:02d}": 100 for month in range(1, 13)}
     total, requested = _run(monkeypatch, "tổng doanh thu năm 2025", year_2025)
     assert total["query_plan"]["intent"] == "YEAR_AGGREGATE"
-    assert "1,200 VND (12 tháng)" in total["answer"]
+    assert "1.200 ₫ trên 12 tháng" in total["answer"]
     assert requested == list(year_2025)
     year_2026 = {f"2026-{month:02d}": 200 for month in range(1, 10)}
     average, requested = _run(monkeypatch,
                               "doanh thu trung bình mỗi tháng năm 2026", year_2026)
     assert average["query_plan"]["aggregation"] == "monthly_average"
-    assert "200 VND (9 tháng, tổng 1,800 VND)" in average["answer"]
+    assert "200 ₫, tính từ 9 tháng" in average["answer"]
     assert requested == list(year_2026)
 
 
@@ -98,10 +98,10 @@ def test_largest_mom_decline_in_first_six_months(monkeypatch):
     assert result["query_plan"]["intent"] == "MULTI_STEP_ANALYSIS"
     assert result["query_plan"]["aggregation"] == "largest_mom_decline"
     assert requested == list(values)
-    assert "tháng 2026-04" in result["answer"]
-    assert "2026-03 = 110 VND" in result["answer"]
-    assert "tháng này = 40 VND" in result["answer"]
-    assert "-70 VND (-63.64%)" in result["answer"]
+    assert "tháng 4/2026" in result["answer"]
+    assert "từ 110 ₫ trong tháng 3/2026 xuống 40 ₫" in result["answer"]
+    assert "giảm 63,64%" in result["answer"]
+    assert result["analysis"]["difference"] == -70
 
 
 def test_year_max_min_spread(monkeypatch):
@@ -110,9 +110,9 @@ def test_year_max_min_spread(monkeypatch):
         "Trong năm 2025, tháng nào có doanh thu cao nhất và tháng nào "
         "thấp nhất, chênh lệch bao nhiêu?"), values)
     assert result["query_plan"]["aggregation"] == "max_min_spread"
-    assert "2025-12: 120 VND" in result["answer"]
-    assert "2025-01: 10 VND" in result["answer"]
-    assert "chênh lệch 110 VND" in result["answer"]
+    assert "tháng 12/2025 với 120 ₫" in result["answer"]
+    assert "tháng 1/2025 với 10 ₫" in result["answer"]
+    assert "110 ₫" in result["answer"]
 
 
 def test_missing_month_in_range_does_not_produce_partial_total(monkeypatch):

@@ -1,5 +1,7 @@
 """Route each V3 query through an evaluated, simple local retrieval policy."""
 
+from functools import lru_cache
+
 from src.rag.cli import selected_retriever
 from src.rag_v2.hybrid import HybridRetriever
 from src.rag_v2.lexical import BM25Retriever, build_index
@@ -8,11 +10,18 @@ from src.rag_v3.routing import BM25_FILTERED, HYBRID_GENERAL, route_query
 
 class RoutedRetriever:
     def __init__(self, dense=None, lexical=None):
+        from src.foody.review_paths import DOCUMENTS as NEW_DOCUMENTS
+        from src.foody.review_runtime import LEXICAL, new_corpus_active
+
         self.dense = dense or selected_retriever()
         self.dense.monitor = False
         if lexical is None:
-            build_index()
-            lexical = BM25Retriever()
+            if new_corpus_active():
+                lexical = BM25Retriever(LEXICAL / "reviews.sqlite",
+                                        LEXICAL / "index_manifest.json", NEW_DOCUMENTS)
+            else:
+                build_index()
+                lexical = BM25Retriever()
         self.lexical = lexical
         self.metadata = self.dense.metadata
         self.policies = {
@@ -31,3 +40,9 @@ class RoutedRetriever:
         hits, elapsed, debug = self.policies[decision.retrieval_method].search_debug(request)
         return hits, elapsed, {**debug, "retrieval_version": "RAG_V3",
                                "query_route": decision.category}
+
+
+@lru_cache(maxsize=1)
+def cached_retriever():
+    """Keep the verified indexes and embedding session warm across requests."""
+    return RoutedRetriever()

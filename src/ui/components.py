@@ -52,3 +52,10 @@ def money(value):
 
 def percent(value):
     return "—" if value is None else f"{float(value):.2%}"
+
+
+def text_sentiment_label(prediction):
+    """The explorer badge uses the saved text-model class, never the rating."""
+    if prediction not in {"negative", "neutral", "positive"}:
+        raise ValueError("Unsupported sentiment model class")
+    return f"Text sentiment: {prediction.title()}"

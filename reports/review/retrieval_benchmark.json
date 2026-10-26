@@ -1,0 +1,249 @@
+{
+  "dataset_version": "review_2025_2026_v1",
+  "documents_sha256": "216774cba4762169b47f0029f1527e083eaffe5226b4be1cae281679b2cab186",
+  "judgments_sha256": "e763e0c7850a613f7f22af065f8ea1894722247dfe64dbfa5d0c14388ffeac63",
+  "judgment_scope": "Six known-positive reviews from the new corpus; unjudged hits may also be relevant.",
+  "case_count": 6,
+  "summary": {
+    "dense": {
+      "hit_at_5": 0.5,
+      "mrr_at_10": 0.47222222222222227,
+      "latency_ms": 26.936599999316968
+    },
+    "bm25": {
+      "hit_at_5": 0.8333333333333334,
+      "mrr_at_10": 0.8333333333333334,
+      "latency_ms": 100.12551666720053
+    }
+  },
+  "cases": [
+    {
+      "query": "Trà sữa đậm vị và topping nhiều?",
+      "restaurant_id": "14",
+      "dense": {
+        "hit_at_5": 0.0,
+        "mrr_at_10": 0.16666666666666666,
+        "latency_ms": 44.98469999816734,
+        "top_review_ids": [
+          "r26_947668c3def654f087d0ee79af53581bdf3089051ce8031f0cde77cafeca48c2",
+          "r26_2ff505baa2195545bad8de401637d4ba0ca72e1e02b668f2ecf0eae10445fcb9",
+          "r26_2528801b38f7b0909bb73f72b43447dee3533b9fb55f09b6e4027e5dda500eb6",
+          "r26_ebce38a7a45d713e9891a3a25cc5d42fccff335efc6125c125b45f1a665b0424",
+          "r26_77c06952cf76510b332051cfbf26181fd82f5e31169e9662e7b9a128c0cf8ee6",
+          "r26_b07dc8bf08643234a424337a2e46cbe7b0be0c341ec8e320a35243db10f7188c",
+          "r26_4fa519b0ebac8d926c7bfb9a85967bda34c43120244f3fb98f5fd5d7499e93ea",
+          "r26_ad6ee944169500eda87be9b57005ad0f17669e9e90fa43c1d7d9a5e9960e65b9",
+          "r26_54ba073cffb12a66db8a577e6436bfd35a137ee909b6813b5d6d050005dc1e1b",
+          "r26_7cd5e95982a8e6130f02251e4d194ebf348e836d35317f5270716eaad18930a3"
+        ]
+      },
+      "bm25": {
+        "hit_at_5": 1.0,
+        "mrr_at_10": 1.0,
+        "latency_ms": 278.79350000148406,
+        "top_review_ids": [
+          "r26_b07dc8bf08643234a424337a2e46cbe7b0be0c341ec8e320a35243db10f7188c",
+          "r26_bcf81ca28485ffa35949065b34923a568214deb086289bcf914b634c488be2fc",
+          "r26_5734a3a81f76561a24dc143d62b05178b44c0bb52351798b2ffe9dab806aad95",
+          "r26_77c06952cf76510b332051cfbf26181fd82f5e31169e9662e7b9a128c0cf8ee6",
+          "r26_303e9c7d96ea5282a2293a6068a8d35a0f13bae5a767f8f02c7a67bc4328af1d",
+          "r26_5e453361bfd2e9b92f306d95eb6996c10232f993a4b75181500cfb132532c0c2",
+          "r26_d87b578d5263f3e56bed334ad5d70646f2f68222810da21868e55d16448d4c6e",
+          "r26_7859d0ad4f39515658302a12bdc2134b4bbfeb326e9167810cd503dc334d5762",
+          "r26_72592254eda15b080cffb0157d9b490053739976789400127bedba7e137a65dc",
+          "r26_9c1b01f3028b125093bd0b9714634f02b814200f0f07b5d1fa69d5691dc3da82"
+        ]
+      }
+    },
+    {
+      "query": "Không gian đẹp và món ăn ngon?",
+      "restaurant_id": "2998",
+      "dense": {
+        "hit_at_5": 0.0,
+        "mrr_at_10": 0.0,
+        "latency_ms": 22.53729999938514,
+        "top_review_ids": [
+          "r26_1889d5177f8af21b4d8b67e7ab536447b843e7f6611039e698526675c0e2c4d5",
+          "r26_037d129273467ac3a778355daf895a83196089011a9d854f2f5454a524a78a3a",
+          "r26_6b464f6aa28508df2c2cb8fe0d9e22ae67efae466ef425d8d3fb658253454b84",
+          "r26_8033010210ee8d21ce2a88e8e0c2b7a9479dbdbf0abf839041dc129248e9770a",
+          "r26_881d8304fdac4b9677f1d457e592922a9716ec02a8bd818b48d749ac2bf979bf",
+          "r26_a8595975e68534350b0cf3ba862dc37655d1b5ee658920437cee7de27010c38c",
+          "r26_d75f0f17df539e4aa6c53293fe92b4cd0984fe05abc41a0f2009cfab2efd6a55",
+          "r26_e8f574d201e4ae49b3942a43422ddc7ea263c58cc793ddd0ebaf760f3c4bf502",
+          "r26_cbdab37b659cfdebb390b46c65dc1fb9654d9a6b8a633a644f056c63224e5b4c",
+          "r26_852f6e1611100dae671df8ee6db2dd84e3458662ad0c05f9b3225a77ab06ba07"
+        ]
+      },
+      "bm25": {
+        "hit_at_5": 0.0,
+        "mrr_at_10": 0.0,
+        "latency_ms": 75.8352000011655,
+        "top_review_ids": [
+          "r26_53e592f72f9e9ef4dd501620e830fca80aa456626f615514d442c699c0fa32e8",
+          "r26_1889d5177f8af21b4d8b67e7ab536447b843e7f6611039e698526675c0e2c4d5",
+          "r26_0ac87e216cdcb27452f79eaae1f546faca0c0a7503bdbb7852ca5adb4465a61c",
+          "r26_0be65ba6f253c561c4f123f5c7fe108b22b16b2ee34e1418ebe437766e9f1d4f",
+          "r26_d75f0f17df539e4aa6c53293fe92b4cd0984fe05abc41a0f2009cfab2efd6a55",
+          "r26_919a710577b1d86f48f5d71b74b24f75977d3589b3f2920dcf4bf20060a5c74f",
+          "r26_316d841553048e749d674fac7dd58258b131558e7ad0ef0a30f2dc4664c32dcc",
+          "r26_1199e016030a4c129b30e975366783877b88521cd8750f1a77e171ba2c34e8ef",
+          "r26_a8595975e68534350b0cf3ba862dc37655d1b5ee658920437cee7de27010c38c",
+          "r26_6b5c2de49caa1060ced8f4c7207666ec0f678a055aea8504e73cdd5068714eaa"
+        ]
+      }
+    },
+    {
+      "query": "Giá bình dân, món ngon?",
+      "restaurant_id": "2953",
+      "dense": {
+        "hit_at_5": 1.0,
+        "mrr_at_10": 1.0,
+        "latency_ms": 25.858799999696203,
+        "top_review_ids": [
+          "r26_f1f9c187a4b660356139e2f3c04d5c8f433f221e861fef0ac99e03fb34c883c0",
+          "r26_8e806d86234cd4cbc1ceeadd2be7b1652ae50308bb47ec4605a13e7df3d0e6a9",
+          "r26_00282a4accad36c8f086b487ef58d9193c902ad348449854ac59ff22bcc510ba",
+          "r26_cc7c834c451942864c5aba9c01558b58b327711a18a7b6cf6f208f2d496a5d74",
+          "r26_346b11c7562ed6ae8b0696915b05b62d9cf862cd7f5a92b7d4e73bd529a02c9d",
+          "r26_61453a852f47850474680ad9e3e46a24e4460cae6f69426afeee6ef2172598fe",
+          "r26_155a731daa38ef089aec3dc799d203007e1fd4c9dba9fb9274496c14dc8b9d9b",
+          "r26_5d455f7418e0cf2c5dd27a9b057dd331c3f16af4b55efd3c3d435129c8efd79c",
+          "r26_76fd74c1468ad7b0d42061f1ae3d0a8b46014e90ec39aa21ca1994516dca0d02",
+          "r26_df0626e07a2a1a9885a9a5b3c3ada7c50ad9dc3aceff21eabf303114b75f3e5d"
+        ]
+      },
+      "bm25": {
+        "hit_at_5": 1.0,
+        "mrr_at_10": 1.0,
+        "latency_ms": 66.48259999928996,
+        "top_review_ids": [
+          "r26_f1f9c187a4b660356139e2f3c04d5c8f433f221e861fef0ac99e03fb34c883c0",
+          "r26_cc7c834c451942864c5aba9c01558b58b327711a18a7b6cf6f208f2d496a5d74",
+          "r26_5d455f7418e0cf2c5dd27a9b057dd331c3f16af4b55efd3c3d435129c8efd79c",
+          "r26_346b11c7562ed6ae8b0696915b05b62d9cf862cd7f5a92b7d4e73bd529a02c9d",
+          "r26_7e6b0c62bf381fdea0b8cf53918b10f9e63c3f9184f9af8b01ea55b805bc47f0",
+          "r26_76fd74c1468ad7b0d42061f1ae3d0a8b46014e90ec39aa21ca1994516dca0d02",
+          "r26_f8cd8dec5bb29f3a5863642e57041a39bba76225f27d0c8d7c0466ff01074420",
+          "r26_0290117a0af206dc84158cfc569618898d138d9ff0570224d3fb6ca3be1f93d4",
+          "r26_7ec9ac6f74be0ecc1fe6d992061ffb2313b83737f65b0bae050cdd1d3f62c7cd",
+          "r26_6e24795056c110a52bc41251f4456a23d66a48cb49c2a9d412ddc42680cf0830"
+        ]
+      }
+    },
+    {
+      "query": "Cháo có mùi khê và vị khó chịu?",
+      "restaurant_id": "109",
+      "dense": {
+        "hit_at_5": 0.0,
+        "mrr_at_10": 0.16666666666666666,
+        "latency_ms": 24.87720000135596,
+        "top_review_ids": [
+          "r26_d0e648d1a90f44b06f5ba04e6ef5bd88311bef1141de7fd9adf07af4142cc163",
+          "r26_cb81ab2bbfc4c1d36b9ebf050738094f99448f8630e088f52db525813b322cc2",
+          "r26_95bde395da1e20500ba48a10fd2443aac180ae9a8f11d12dc8aa8848e33d2505",
+          "r26_5bd6992d97b917f8c4cb25bbf4c3cc51a00284a1df8dba6f6350825135b6a7d3",
+          "r26_5ea263b18511725f5be0a07d7cf2684cbd19079110713d2a54296da25677712d",
+          "r26_8e89bb476655e9c101640f1e4689f385f29103eec37059da3a01af0c2491d7c7",
+          "r26_67ad69ed16d88c909459317482e10a58164750f1f7e7de50e2e766cfb2eecbb0",
+          "r26_e8d1d38d8eb563c2b1392cbf93a2f31259063030f12de6cbca92df45658cb60f",
+          "r26_ca9eda41f7de464f7063de8641046c0032938b98aa9a0d67041d6780212779fc",
+          "r26_1ea7f236741b7a85a14a155f0d46da4712a4939656384e431a4ea4b7f5d47aea"
+        ]
+      },
+      "bm25": {
+        "hit_at_5": 1.0,
+        "mrr_at_10": 1.0,
+        "latency_ms": 54.36299999928451,
+        "top_review_ids": [
+          "r26_8e89bb476655e9c101640f1e4689f385f29103eec37059da3a01af0c2491d7c7",
+          "r26_dfe719892193d485cf131deb6e5d3722aa9373cf1d215b70527bae34747d853b",
+          "r26_7f0f3af5d34aa423fc7e4ce0c38bbdf54e44f7a0042229c9777b05572d22c048",
+          "r26_267f23c91d7a968a05daa4366ff06c9eebe87d65998a189e0cf058bbbf850795",
+          "r26_d0e648d1a90f44b06f5ba04e6ef5bd88311bef1141de7fd9adf07af4142cc163",
+          "r26_cd7157fe4bb5aec92d2ecb01a4e637c034ef80f9d7a86c69929c3a69addb2230",
+          "r26_d17d91876c590c7dc94f75f6ecf4b5f62d8f14adf14f81a5684f56a5b4b97194",
+          "r26_4c7463eeddb903e971b7ac3cdee0374771f4a2df164536c232f9ae43af802aa9",
+          "r26_b7d0ae458f8e67ef2d68b6a0c52b9b750f823f0e152af54867c21796aeec92d1",
+          "r26_217e19b504335596da460e4f7fb8ea58ed6c3b63429f237761d02e43d38fdce2"
+        ]
+      }
+    },
+    {
+      "query": "Bánh mì ăn nhiều lần vẫn ngon?",
+      "restaurant_id": "115",
+      "dense": {
+        "hit_at_5": 1.0,
+        "mrr_at_10": 0.5,
+        "latency_ms": 21.79039999828092,
+        "top_review_ids": [
+          "r26_6eb232a2f988ecdacb54474fcc36288b3e4e2cbb3e91488edf5194769a4ceec6",
+          "r26_c92a4f1a524a8945ea1b24d2279afad1835d1a27093c76dc089156f2559e3501",
+          "r26_e54da2c3e40005667774a6d4a1e92a6c7b8df9dcb75d0f839188c1353df13f96",
+          "r26_4db7b2c3037503865fa8a109834525d5eaf06322aaed3540baddfd2d8080e3d3",
+          "r26_284c7573feb19bb777f47db16b90a22273eb06974069ecd7ac3dbc3e953ac5a8",
+          "r26_e2f6dcb11db972a5cdffeecb7c7b1f908d99f13656d5af5eaa3c4a229e474bd8",
+          "r26_37890b2a666ed9ab2d07642ac170a8b2f67d4359cb092cf942e234e7978f1995",
+          "r26_4d65a4e84c1c52601ef47c5493c65a197c52a3efa1972a2cacd3afa4d5aab57d",
+          "r26_6f8812a5faba72c2c82081c293d609abfd79740504a072412d760b640f2a3b58",
+          "r26_49101a5efe8767779111fe7b4650cb9c74ec8c62d1a06fef8910ac4423f99826"
+        ]
+      },
+      "bm25": {
+        "hit_at_5": 1.0,
+        "mrr_at_10": 1.0,
+        "latency_ms": 60.560400001122616,
+        "top_review_ids": [
+          "r26_c92a4f1a524a8945ea1b24d2279afad1835d1a27093c76dc089156f2559e3501",
+          "r26_0b6b3321eaee51d3c1bba78ee8218c2fd448b389c5c56d5d120f100ac4bebfe2",
+          "r26_b8adb4f0dc63047ddef170d3d2507a175febba905c3383860613eef404e08e7e",
+          "r26_b8e0e2c37f4e50f72638f5b1a3d46cce554ca5c153865eb9eb47a4bbf129651b",
+          "r26_507fb585dfae8b2df0313781b62d867e7570f134305365d9e8cc8412c3c18580",
+          "r26_284c7573feb19bb777f47db16b90a22273eb06974069ecd7ac3dbc3e953ac5a8",
+          "r26_83a60a754a5239621ba5a7daf052f9988e9f2351d4a12df940103372629a5dc9",
+          "r26_37890b2a666ed9ab2d07642ac170a8b2f67d4359cb092cf942e234e7978f1995",
+          "r26_549ea3a1bedb6c78559ed550bb05d2074fcadb762c958d254f191319ca16f0d2",
+          "r26_477be506bbcfe9e3685fa1b57d1def0c27ba347f89f495052dfe24d5087a3542"
+        ]
+      }
+    },
+    {
+      "query": "Nước uống ngon, giá rẻ, phục vụ nhiệt tình?",
+      "restaurant_id": "32",
+      "dense": {
+        "hit_at_5": 1.0,
+        "mrr_at_10": 1.0,
+        "latency_ms": 21.571199999016244,
+        "top_review_ids": [
+          "r26_e181a9a175809ff563ae880d845bc69472103fbac03c37948b360456010071fb",
+          "r26_29bc88f7710eb1bcd716f13e6e48b43c6c9c7793f04b460ced1192fb5c80f6c1",
+          "r26_d9ee19f0e98ae38ed35b26d2c53674806bc7533cb877878821cff1c32079f33a",
+          "r26_1520f79d60ec6539b85e576abd92b5b80ef512422aef9b049cae390bacb2ee66",
+          "r26_ac2bd5f61f2896f2c082222e19c0f79605740692554e0e121e51ece1960a0512",
+          "r26_31140feabd23d00e43a02f76f727881749b147693550be25cea3c271bd2bd35d",
+          "r26_198d049a324d871b5931cbcb9329955f2176340042277ef50ab2f576e8b2a332",
+          "r26_65bc3dc81ca8d56bf5ba9580f6e09365ec11d66dae071e8562c21fe8e177e965",
+          "r26_3524e070ed5c3504256361721c7db58edf83cc369926b788ec43eceb6bc37998",
+          "r26_455a960ee9e2373af1f6e9eeac8450862ffc2c1d071331b79473bd656c098860"
+        ]
+      },
+      "bm25": {
+        "hit_at_5": 1.0,
+        "mrr_at_10": 1.0,
+        "latency_ms": 64.71840000085649,
+        "top_review_ids": [
+          "r26_e181a9a175809ff563ae880d845bc69472103fbac03c37948b360456010071fb",
+          "r26_d9ee19f0e98ae38ed35b26d2c53674806bc7533cb877878821cff1c32079f33a",
+          "r26_198d049a324d871b5931cbcb9329955f2176340042277ef50ab2f576e8b2a332",
+          "r26_04ce6069dc2a1f1cc082cccc855dd55f11ab44ff3954dcf403862bf7c6021271",
+          "r26_1520f79d60ec6539b85e576abd92b5b80ef512422aef9b049cae390bacb2ee66",
+          "r26_ac2bd5f61f2896f2c082222e19c0f79605740692554e0e121e51ece1960a0512",
+          "r26_65bc3dc81ca8d56bf5ba9580f6e09365ec11d66dae071e8562c21fe8e177e965",
+          "r26_31140feabd23d00e43a02f76f727881749b147693550be25cea3c271bd2bd35d",
+          "r26_29bc88f7710eb1bcd716f13e6e48b43c6c9c7793f04b460ced1192fb5c80f6c1",
+          "r26_455a960ee9e2373af1f6e9eeac8450862ffc2c1d071331b79473bd656c098860"
+        ]
+      }
+    }
+  ]
+}

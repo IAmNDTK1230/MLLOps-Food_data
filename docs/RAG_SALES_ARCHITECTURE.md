@@ -1,51 +1,48 @@
-# Restaurant Intelligence: reviews and sales
+# Food Review Intelligence: direct-ID Sales and Review alignment
 
-The accepted Review-2 retrieval index and models remain frozen. The order CSV is a separate structured source. Restaurant IDs belong to the sales source; Foody reviews have name-derived keys, so cross-source joins use only audited, unique normalized-name matches. Unmatched or ambiguous identities cannot enter cross-analysis.
+The 2025–2026 Review corpus and Sales warehouse share the same restaurant ID namespace. The acceptance audit found all **817** Review IDs in Sales and **817 exact name matches**. Names were diagnostic evidence; online joins use `restaurant_id` only. The prior name-derived Review corpus, indexes and mapping table remain for rollback.
 
-## Offline data
-
-```mermaid
-flowchart LR
-  R[Foody reviews] --> C[Existing cleaning and sentiment/aspect inference]
-  C --> D[Review documents] --> E[Existing MiniLM] --> V[Existing Chroma and BM25]
-  S[order_cleaning.csv] --> A[Schema, quality and identity audit] --> P[(Existing PostgreSQL warehouse)]
-  P --> M[Daily, weekly, monthly SQL marts] --> J[Deterministic monthly summary documents on demand]
-```
-
-Monthly sales documents are generated from verified SQL aggregates on demand. There is no sales vector index: SQL answers exact numeric questions, and no online route needs semantic search over monthly numeric documents. This avoids an extra embedding/index build and keeps the 400,000 raw orders out of Chroma. `monthly_summary_document` uses fixed fields and metadata; its count is the number of available restaurant-month mart rows. The accepted review Chroma/BM25 is not altered.
-
-## Online query
+## Review pipeline
 
 ```mermaid
 flowchart TB
-  U[Streamlit question] --> R{Deterministic router}
-  R -->|SALES_SQL| S[Whitelisted parameterized PostgreSQL query]
-  R -->|REVIEW_RAG| V[Accepted Review RAG V3]
-  R -->|CROSS_ANALYSIS| I[Verify one-to-one restaurant mapping and date window]
-  I --> S2[SQL sales facts]
-  I --> V2[Date-filtered Review RAG V3 and Qwen2.5]
-  S2 --> G[Grounded assembly]
-  V2 --> G
-  G --> O[Answer with source and review citations; no causal claim]
-  S --> O
-  V --> O
+  A[data_2025_2026.csv] --> B[Strict UTF-8, schema and ID audit]
+  B --> C[Exact deduplication and stable review_id]
+  C --> D[Canonical restaurant_id and enriched Parquet]
+  D --> E[Frozen sentiment and aspect models]
+  E --> F[One document per eligible review]
+  F --> G[MiniLM 384-dimensional embeddings]
+  G --> H[Side-by-side Chroma]
+  F --> I[Side-by-side BM25 / FTS5]
+  H --> J[RAG V3]
+  I --> J
 ```
 
-The cross route computes revenue and growth with SQL, then asks the accepted RAG V3 a review complaint question for the **same restaurant and sales month**. Qwen only summarizes retrieved review evidence through the existing V3 support gate. The final assembly keeps SQL numbers separate from review observations and explicitly says that temporal coincidence does not establish causation. If the mapping, sales month, or aligned reviews are absent, it returns a limitation rather than mixing unrelated evidence. Review-only questions retain the existing path.
+The source has 15,639 rows; 183 exact duplicates are removed. All 15,456 distinct reviews are enriched with the existing models, without retraining or deriving sentiment from rating. Two comments contain U+FFFD; they remain in the auditable enriched corpus but are excluded from RAG. Both new indexes contain 15,454 stable review IDs. The existing one-document-per-review chunking policy remains.
 
-Delivered `sales_amount` is realized revenue. Gross sales includes all statuses and is never presented as realized revenue. AOV is Delivered revenue divided by Delivered order count. Cancellation/refund rates use order counts divided by all order counts. Sales dated after the current Vietnam date remain in `fact_order` for audit but are excluded from observed marts. A completed month is the default comparison period; a requested current month uses the same elapsed day range of the previous month.
+The corpus covers **2025-01-01 through 2026-06-30**. Sales continues beyond this period. A Cross request for a later month returns SQL facts and explicitly states that same-period Review evidence is unavailable. It never substitutes older reviews.
 
-## Operations
+## Identity and online query
 
 ```mermaid
-flowchart LR
-  GH[GitHub Actions CI/CD] --> APP[Streamlit and FastAPI images]
-  TF[Terraform network and volumes] --> APP
-  APP --> PG[(PostgreSQL sales and reviews)]
-  APP --> RAG[Review Chroma/BM25 + Qwen]
-  APP --> SQ[(SQLite LLMOps)]
-  APP --> PR[Prometheus] --> GR[Existing Grafana dashboard]
-  K[Kafka new review events] --> CO[Consumer] --> PG
+flowchart TB
+  ID[Sales restaurant_id] --> SQL[(PostgreSQL Sales)]
+  ID --> R[Review corpus restaurant_id]
+  R --> IDX[Chroma + BM25]
+  IDX --> RAG[RAG V3 + grounded Qwen]
+  SQL --> X[Cross Analysis]
+  RAG --> X
+  X --> OUT[Verified sales facts + same-ID, same-period citations]
 ```
 
-Historical orders are batch loaded with `python -m src.cli sales-load`; they are not replayed through Kafka. The loader uses source SHA256, a transaction, a unique `order_id`, and upserts. A review warehouse reload preserves the shared dimensions used by sales. Prometheus labels are bounded statuses only, with no question or restaurant names.
+The deterministic router selects Sales SQL, Review RAG or Cross Analysis. SQL uses predefined parameterized functions; Qwen never generates executable SQL. Cross verifies that the Sales ID exists in `dim_review_restaurant_v2`, then counts Review facts for the exact Sales month and passes the same `restaurant_id` and date bounds to dense and BM25 retrieval. Financial facts stay separate from Review observations, and the answer disclaims causation. Empty periods return a limitation without Review citations.
+
+Review Intelligence selects `restaurant_id` internally and displays the restaurant name. The legacy `restaurant_key` applies only to the retained rollback corpus. Separate `dim_review_restaurant_v2` and `fact_review_v2` tables preserve the Sales and old Review facts. The v2 warehouse load is idempotent by source hash and review count.
+
+Delivered `sales_amount` remains realized revenue. AOV uses Delivered revenue divided by Delivered orders; cancellation and refund rates use their respective counts divided by all orders. Existing warehouse business rules are unchanged.
+
+## Operations and rollback
+
+`config/review_corpus.yaml` selects the active corpus. The original Review source, Chroma/BM25 indexes and name mapping remain for rollback; model binaries are not duplicated. The active Review version and source checksum appear in `/version`, and demo-preflight checks the active index and manifest. SQLite LLMOps and Prometheus/Grafana metrics use the existing monitoring path. Restaurant IDs may appear in local request metadata, never in high-cardinality Prometheus labels.
+
+The six-query known-positive benchmark is `reports/rag/review_2025_2026_known_relevance.json`. Its Hit@K/MRR values apply only to this new corpus and are not directly comparable with the old benchmark.

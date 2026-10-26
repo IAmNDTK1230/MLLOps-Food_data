@@ -4,10 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from src.sales import queries
-
-
-def _money(value):
-    return f"{value:,.0f} VND"
+from src.sales.response import SalesAnalysisResult, render, response_mode
 
 
 def _previous(period):
@@ -26,6 +23,13 @@ def _trace(plan, effective, missing):
         "sql_mode": "predefined_parameterized_monthly_sales",
         "effective_periods": list(effective),
         "missing_periods": list(missing),
+        "period_selection": plan.period_selection or "RANGE",
+        "sql_functions": ["monthly_sales"],
+        "calculations": list(plan.analytical_steps[1:]),
+        "qwen_used": False,
+        "fact_validation_status": "not_needed",
+        "grounding_status": "sql_verified",
+        "response_mode": response_mode(plan),
     }
 
 
@@ -47,61 +51,70 @@ def answer_advanced(conn, restaurant_id, identity, plan, *, today):
             "restaurant_id": str(restaurant_id), "query_plan": trace,
             "sql_facts": {period: queries.jsonable(row) for period, row in rows.items()},
             "review_evidence": []}
+    mode = response_mode(plan)
     if not effective or missing:
         detail = ", ".join(missing) if missing else "khoảng đã yêu cầu"
         return {**base, "status": "no_data", "answer": (
             f"Không đủ dữ liệu doanh thu tháng cho {detail}; "
-            "không tính kết quả từ khoảng thiếu dữ liệu.")}
+            "không tính kết quả từ khoảng thiếu dữ liệu."),
+            "analysis": SalesAnalysisResult(plan.kind, mode, plan.metric,
+                                            list(effective), [],
+                                            limitations=["missing SQL facts"]).as_dict()}
 
     values = {period: Decimal(str(rows[period]["delivered_sales"]))
               for period in required}
-    name = identity["restaurant_name"]
-    scope = f"{effective[0]} đến {effective[-1]}"
-    if len(effective) < len(plan.periods):
-        scope += " (chỉ các tháng đã hoàn thành)"
-
+    analysis = SalesAnalysisResult(
+        intent=plan.kind, response_mode=mode, metric=plan.metric,
+        periods=list(effective), values=[values[period] for period in effective],
+        aggregation=plan.aggregation, period_selection=plan.period_selection,
+        limitations=(["Chỉ tính các tháng đã hoàn thành."]
+                     if len(effective) < len(plan.periods) else []),
+    )
     if plan.kind == "MAX_MIN_PERIOD":
         chosen = (max if plan.aggregation == "max" else min)(
             effective, key=lambda period: values[period])
-        direction = "cao nhất" if plan.aggregation == "max" else "thấp nhất"
-        answer = (f"Doanh thu Delivered {direction} của {name} trong {scope} "
-                  f"là tháng {chosen}: {_money(values[chosen])}.")
+        analysis.details = {"selected_period": chosen, "selected_value": values[chosen]}
+        analysis.observations = [f"{plan.aggregation}_month:{chosen}"]
     elif plan.kind == "PERIOD_TREND":
-        series = "; ".join(f"{period}: {_money(values[period])}" for period in effective)
-        answer = f"Xu hướng doanh thu Delivered của {name} từ {scope}: {series}."
+        analysis.difference = values[effective[-1]] - values[effective[0]]
+        analysis.observations = ["end_above_start" if analysis.difference > 0 else
+                                 "end_below_start" if analysis.difference < 0 else
+                                 "end_equals_start"]
     elif plan.kind in {"RANGE_AGGREGATE", "YEAR_AGGREGATE"}:
         total = sum((values[period] for period in effective), Decimal(0))
         if plan.aggregation == "monthly_average":
-            average = total / len(effective)
-            answer = (f"Doanh thu Delivered trung bình mỗi tháng của {name} "
-                      f"trong {scope}: {_money(average)} "
-                      f"({len(effective)} tháng, tổng {_money(total)}).")
+            analysis.details = {"aggregate_value": total / len(effective), "total": total}
         else:
-            answer = (f"Tổng doanh thu Delivered của {name} trong {scope}: "
-                      f"{_money(total)} ({len(effective)} tháng).")
+            analysis.details = {"aggregate_value": total}
     elif plan.aggregation == "max_min_spread":
         high = max(effective, key=lambda period: values[period])
         low = min(effective, key=lambda period: values[period])
-        spread = values[high] - values[low]
-        answer = (f"Trong {scope}, doanh thu Delivered của {name} cao nhất tháng "
-                  f"{high}: {_money(values[high])}; thấp nhất tháng {low}: "
-                  f"{_money(values[low])}; chênh lệch {_money(spread)}.")
+        analysis.difference = values[high] - values[low]
+        analysis.details = {"high_period": high, "high_value": values[high],
+                            "low_period": low, "low_value": values[low]}
+        analysis.observations = [f"high:{high}", f"low:{low}"]
     elif plan.aggregation == "largest_mom_decline":
         changes = [(period, values[period] - values[_previous(period)])
                    for period in effective]
         declines = [(period, change) for period, change in changes if change < 0]
-        if not declines:
-            return {**base, "status": "ok", "answer": (
-                f"Trong {scope}, không có tháng nào doanh thu Delivered của {name} "
-                "giảm so với tháng trước.")}
-        chosen, change = min(declines, key=lambda item: item[1])
-        prior = _previous(chosen)
-        relative = (f"{change / values[prior] * 100:+.2f}%" if values[prior]
-                    else "không tính được vì tháng trước bằng 0")
-        answer = (f"Trong {scope}, doanh thu Delivered của {name} giảm mạnh nhất "
-                  f"ở tháng {chosen}: tháng trước {prior} = {_money(values[prior])}; "
-                  f"tháng này = {_money(values[chosen])}; thay đổi "
-                  f"{_money(change)} ({relative}).")
+        if declines:
+            chosen, change = min(declines, key=lambda item: item[1])
+            prior = _previous(chosen)
+            analysis.difference = change
+            analysis.percent_change = change / values[prior] * 100 if values[prior] else None
+            analysis.details = {"selected_period": chosen, "previous_period": prior,
+                                "previous_value": values[prior],
+                                "current_value": values[chosen]}
+            analysis.observations = [f"largest_decline:{chosen}"]
+        else:
+            analysis.details = {"selected_period": None}
+            analysis.observations = ["no_decline"]
     else:
         raise ValueError("Unsupported deterministic Sales aggregation")
-    return {**base, "status": "ok", "answer": answer}
+    answer = render(analysis, identity["restaurant_name"])
+    if analysis.limitations:
+        answer += " " + " ".join(analysis.limitations)
+    return {**base, "status": "ok", "answer": answer,
+            "analysis": analysis.as_dict(),
+            "display_rows": [{"period": period, "value": float(values[period])}
+                             for period in effective]}

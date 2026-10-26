@@ -34,12 +34,18 @@ def add_commands(commands):
 
 
 def selected_retriever():
+    from src.foody.review_runtime import VECTOR, new_corpus_active
+    from src.rag.vector_store import open_collection
+
     selection = json.loads(SELECTION.read_text(encoding="utf-8"))
     model_path = portable_artifact_path(selection["model_file"])
     if digest(model_path) != selection["model_hash"]:
         raise ValueError("Embedding artifact checksum differs from selected model")
     spec = next(item for item in CANDIDATES if item.name == selection["model"])
     embedder = LocalEmbeddings(spec, local_files_only=True)
+    if new_corpus_active():
+        collection, metadata = open_collection(VECTOR / "index_manifest.json", VECTOR)
+        return Retriever(embedder, collection, metadata)
     return Retriever(embedder)
 
 

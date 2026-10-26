@@ -3,7 +3,9 @@
 import pandas as pd
 import streamlit as st
 
-from src.ui.components import answer_card, badge, empty_state, evidence_card, header, money, percent
+from src.sales.response import money as vietnamese_money
+from src.sales.response import percentage as vietnamese_percentage
+from src.ui.components import answer_card, empty_state, evidence_card, header, money, percent
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -43,6 +45,16 @@ def review_snippets(review_ids, restaurant_key):
     """Resolve already accepted evidence IDs to local review text for display only."""
     if not review_ids or not restaurant_key:
         return {}
+    from src.foody.review_runtime import ENRICHED, new_corpus_active
+
+    if new_corpus_active():
+        frame = pd.read_parquet(ENRICHED,
+                                columns=["review_id", "restaurant_id", "comment", "rating",
+                                         "review_time"])
+        rows = frame.loc[frame.review_id.isin(review_ids) &
+                         frame.restaurant_id.astype(str).eq(str(restaurant_key))]
+        return {row.review_id: {"text": row.comment, "rating": row.rating,
+                                "date": row.review_time} for row in rows.itertuples()}
     frame = pd.read_parquet("data/foody/enriched/reviews.parquet",
                             columns=["review_id", "restaurant_key", "text", "raw_rating",
                                      "review_timestamp"])
@@ -57,10 +69,50 @@ def select_review_snippets(frame, review_ids, restaurant_key):
                             "date": row.review_timestamp} for row in rows.itertuples()}
 
 
+def cross_evidence_metadata(item):
+    """Show only metadata carried by the cited review, including missing values."""
+    rating = item.get("rating")
+    rating_label = f"{rating}/10" if rating is not None and pd.notna(rating) else "unavailable"
+    date = item.get("date")
+    date_label = str(date)[:10] if date is not None and pd.notna(date) else "unavailable"
+    aspects = item.get("aspects") or []
+    return (f"Date: {date_label} · Rating: {rating_label} · "
+            f"Sentiment: {(item.get('sentiment') or 'unavailable').title()} · "
+            f"Aspects: {', '.join(aspects) if aspects else 'unavailable'} · "
+            f"Source: {item.get('source') or 'unavailable'}")
+
+
+def sales_result_table(result):
+    """Present verified monthly facts without changing their values."""
+    rows = result.get("display_rows") or []
+    metric = (result.get("analysis") or {}).get("metric", "delivered_sales")
+    title = {"delivered_sales": "Revenue", "aov": "AOV",
+             "cancellation_rate": "Cancellation rate"}.get(metric, "Value")
+    formatter = vietnamese_percentage if metric == "cancellation_rate" else vietnamese_money
+    return pd.DataFrame([{"Period": f"{row['period'][5:7]}/{row['period'][:4]}",
+                          title: formatter(row["value"] * 100 if metric ==
+                                           "cancellation_rate" else row["value"])}
+                         for row in rows])
+
+
+def show_sales_result(result):
+    answer_card("Verified Analysis", result["answer"], "Verified by SQL", "good")
+    table = sales_result_table(result)
+    if not table.empty and len(table) >= 2:
+        st.dataframe(table, hide_index=True, width="stretch")
+        if (result.get("analysis") or {}).get("response_mode") == "TREND":
+            chart = pd.DataFrame(result["display_rows"])
+            st.line_chart(chart.set_index("period")["value"], height=220)
+    change = (result.get("analysis") or {}).get("percent_change")
+    if change is not None and (result.get("analysis") or {}).get("response_mode") == "COMPARISON":
+        direction = "↑" if change > 0 else "↓" if change < 0 else "→"
+        st.caption(f"{direction} {vietnamese_percentage(abs(change))} vs comparison period")
+
+
 def _delta(value):
     if value is None:
         return None
-    return f"{float(value):+.2%} vs previous period"
+    return f"{float(value):+.2%}"
 
 
 def _charts(snapshot):
@@ -128,31 +180,27 @@ def _ask_sql(restaurant_id):
     from src.sales.service import answer_question
     from src.warehouse.loader import connection
 
-    st.subheader("Ask about this restaurant")
-    st.caption("Answers come from verified PostgreSQL aggregates.")
-    suggestions = ["Doanh thu tháng này?", "Tháng doanh thu nào cao nhất?",
-                   "Tỷ lệ đơn hủy?", "AOV là bao nhiêu?",
-                   "So sánh doanh thu tháng trước?"]
-    columns = st.columns(len(suggestions))
-    for column, suggestion in zip(columns, suggestions, strict=True):
-        if column.button(suggestion, key=f"sales_suggest_{suggestion}"):
-            st.session_state["sales_question"] = suggestion
-    question = st.text_input("Sales question", key="sales_question",
-                             placeholder="Ví dụ: Doanh thu tháng 5/2025 là bao nhiêu?")
-    if st.button("Ask Sales SQL", type="primary", key="ask_sales"):
+    st.subheader("✨ AI Sales")
+    st.caption("Ask questions about revenue, orders, AOV or trends.")
+    question = st.text_input("Ask AI Sales", key="sales_question",
+                             placeholder="Ví dụ: So sánh doanh thu tháng 5/2026 với cùng kỳ năm trước")
+    if st.button("✨ Analyze", type="primary", key="ask_sales"):
         if not question.strip():
             empty_state("Enter a sales question to continue")
         elif route_question(question) != "SALES_SQL":
-            empty_state("Ask a sales question here", "Review and cross questions have their own sections.")
+            st.info("Ask about revenue or orders here. Customer feedback belongs in Review Intelligence.")
         else:
             try:
                 with st.spinner("Querying warehouse..."):
                     with connection() as conn:
                         result = answer_question(conn, restaurant_id, question)
-                answer_card("SQL answer", result["answer"], "SQL Verified", "good")
+                if result["status"] == "invalid_period":
+                    st.warning(result["answer"])
+                    return
+                show_sales_result(result)
                 with st.expander("Technical details"):
                     st.json({key: result.get(key) for key in
-                             ("route", "status", "query_plan", "sql_facts")})
+                             ("route", "status", "query_plan", "analysis", "sql_facts")})
             except Exception as error:
                 st.error("Unable to query the sales warehouse.")
                 with st.expander("Technical details"):
@@ -164,23 +212,18 @@ def _cross(restaurant):
     from src.sales.service import answer_question
     from src.warehouse.loader import connection
 
-    st.subheader("Review + Sales Cross Analysis")
-    if not restaurant.get("restaurant_key"):
-        empty_state("Cross-analysis unavailable",
-                    "No verified review mapping exists for this sales restaurant. Sales analytics remains available.")
+    st.subheader("Sales + Customer Feedback")
+    st.caption("Combine verified sales metrics with customer review evidence.")
+    from src.foody.review_runtime import new_corpus_active
+
+    review_id = restaurant.get("review_restaurant_id") if new_corpus_active() else \
+        restaurant.get("restaurant_key")
+    if not review_id:
+        empty_state("Customer feedback is not linked to this sales restaurant.")
         return
-    badge("Verified Mapping", "good")
-    st.caption("Sales facts and review evidence are aligned only for this verified restaurant.")
-    examples = ["Doanh thu giảm thì khách phàn nàn gì?",
-                "Tháng doanh thu thấp nhất có review tiêu cực nào nổi bật?",
-                "Doanh thu và phản hồi khách hàng cho thấy vấn đề nào cần ưu tiên?"]
-    columns = st.columns(3)
-    for column, example in zip(columns, examples, strict=True):
-        if column.button(example, key=f"cross_suggest_{example}"):
-            st.session_state["cross_question"] = example
-    question = st.text_input("Cross-analysis question", key="cross_question",
+    question = st.text_input("Ask about sales and reviews", key="cross_question",
                              placeholder="Doanh thu giảm thì khách phàn nàn gì?")
-    if st.button("Analyze Sales + Reviews", key="ask_cross"):
+    if st.button("✨ Analyze together", key="ask_cross"):
         if route_question(question) != "CROSS_ANALYSIS":
             empty_state("Ask about both sales and reviews",
                         "Include a sales metric and customer feedback in the question.")
@@ -189,15 +232,19 @@ def _cross(restaurant):
             with st.spinner("Analyzing verified evidence..."):
                 with connection() as conn:
                     result = answer_question(conn, restaurant["restaurant_id"], question)
+            if result["status"] == "invalid_period":
+                st.warning(result["answer"])
+                return
             tone = "good" if result["status"] == "grounded" else "warn"
             answer_card("Cross-analysis", result["answer"],
                         "Grounded" if tone == "good" else "Limited evidence", tone)
             ids = tuple(item["review_id"] for item in result.get("review_evidence") or [])
-            snippets = review_snippets(ids, restaurant["restaurant_key"])
+            snippets = review_snippets(ids, review_id)
             for index, item in enumerate(result.get("review_evidence") or [], 1):
                 snippet = snippets.get(item["review_id"], {})
-                evidence_card(f"E{index}", snippet.get("text", "Review source text unavailable"),
-                              f"Rating {snippet.get('rating', 'N/A')} · {snippet.get('date', 'Date unavailable')}")
+                evidence_card(item.get("ref") or f"E{index}",
+                              snippet.get("text", item.get("text") or "Review source text unavailable"),
+                              cross_evidence_metadata(item))
             with st.expander("Technical details"):
                 st.json({key: result.get(key) for key in
                          ("route", "status", "sql_facts", "aligned_review_count")})
@@ -208,8 +255,8 @@ def _cross(restaurant):
 
 
 def sales_page():
-    header("Sales Analytics", "Verified metrics from PostgreSQL Data Warehouse",
-           ("Source: PostgreSQL", "Structured SQL Analytics"))
+    header("Sales Intelligence", "Explore revenue, orders and business performance using verified warehouse data.",
+           ("PostgreSQL", "Verified Analytics"))
     try:
         restaurants = sales_restaurants()
     except Exception as error:
@@ -221,12 +268,8 @@ def sales_page():
         empty_state("No sales restaurants available", "Load the sales warehouse to begin.")
         return
     by_id = {str(item["restaurant_id"]): item for item in restaurants}
-    st.caption(f"{len(restaurants):,} sales restaurants · independent from review restaurant coverage")
-    if st.button("Use Thai Market demo example", key="thai_demo") and "1853" in by_id:
-        st.session_state["sales_restaurant"] = "1853"
-        st.session_state["sales_period"] = "2025-05"
-        st.session_state["_sales_period_restaurant"] = "1853"
-    selected_id = st.selectbox("Sales restaurant", list(by_id),
+    st.caption(f"{len(restaurants):,} sales restaurants available")
+    selected_id = st.selectbox("Restaurant", list(by_id),
                                format_func=lambda value: f"{by_id[value]['restaurant_name']} · ID {value}",
                                key="sales_restaurant")
     restaurant = by_id[selected_id]

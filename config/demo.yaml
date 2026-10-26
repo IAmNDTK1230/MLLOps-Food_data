@@ -9,8 +9,9 @@ rag_version: RAG_V3
 retrieval_policy: aspect_complaint_bm25_filtered_else_rrf_with_causal_mart_guard
 top_k: 5
 prompt_path: prompts/rag/rag_v3.txt
-prompt_version: rag_v3:bea35996ad45
+prompt_version: rag_v3:0ef7448974f8
 fallback_policy: clause_validation_then_one_repair_then_extractive_or_insufficient
 vector_collection: foody_39897b1e_634d0f66c29d
 llmops_backend: state/llmops.sqlite
 default_restaurant: Hanuri - Quán Ăn Hàn Quốc - Nguyễn Đình Chiểu
+default_review_restaurant_id: '83'

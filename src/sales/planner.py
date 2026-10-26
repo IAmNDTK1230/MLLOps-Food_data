@@ -23,6 +23,7 @@ class SalesPlan:
     analytical_steps: tuple[str, ...] = ()
     range_start: str | None = None
     range_end: str | None = None
+    period_selection: Literal["RANGE", "EXPLICIT_SET"] | None = None
 
 
 def _plain(value):
@@ -93,7 +94,7 @@ def _months(start, end):
 def _advanced_plan(value, metric, today):
     recent = re.search(r"\b(\d{1,2})\s+thang\s+gan\s+day\b", value)
     month_range = re.search(
-        r"\btu\s+thang\s+(\d{1,2})\s+den\s+thang\s+(\d{1,2})\s+nam\s+(20\d{2})\b",
+        r"\b(?:tu\s+)?thang\s+(\d{1,2})\s+den\s+thang\s+(\d{1,2})\s+(?:trong\s+)?nam\s+(20\d{2})\b",
         value,
     )
     first_months = re.search(r"\b(\d{1,2})\s+thang\s+dau\s+nam\s+(20\d{2})\b", value)
@@ -103,6 +104,18 @@ def _advanced_plan(value, metric, today):
         return None
     if metric != "delivered_sales":
         return None
+
+    # Named months joined by "và"/commas are a set, never an entire year.
+    if not month_range and ("tong" in value or "tong cong" in value):
+        explicit = extract_requested_periods(value)
+        if 2 <= len(explicit) <= 12:
+            if len(set(explicit)) != len(explicit):
+                raise ValueError("Các tháng trong tập tính tổng phải khác nhau.")
+            return SalesPlan("RANGE_AGGREGATE", metric, explicit, aggregation="sum",
+                             analytical_steps=("fetch_named_months", "sum_revenue"),
+                             period_selection="EXPLICIT_SET")
+        if len(explicit) > 12:
+            raise ValueError("Chỉ hỗ trợ tối đa 12 tháng được nêu rõ.")
 
     if recent:
         count = int(recent.group(1))
@@ -115,7 +128,8 @@ def _advanced_plan(value, metric, today):
         periods = _months(first, last.strftime("%Y-%m"))
         return SalesPlan("PERIOD_TREND", metric, periods, aggregation="monthly_series",
                          analytical_steps=("fetch_monthly_revenue", "order_by_month"),
-                         range_start=periods[0], range_end=periods[-1])
+                         range_start=periods[0], range_end=periods[-1],
+                         period_selection="RANGE")
 
     if month_range:
         start_month, end_month, year = month_range.groups()
@@ -162,7 +176,7 @@ def _advanced_plan(value, metric, today):
         return None
     return SalesPlan(kind, metric, periods, aggregation=aggregation,
                      analytical_steps=steps, range_start=periods[0],
-                     range_end=periods[-1])
+                     range_end=periods[-1], period_selection="RANGE")
 
 
 def build_sales_plan(question, *, today=None):
@@ -175,7 +189,8 @@ def build_sales_plan(question, *, today=None):
     if len(periods) > 2:
         raise ValueError("Giai đoạn này chỉ hỗ trợ so sánh hai kỳ dữ liệu.")
     if len(periods) == 2:
-        return SalesPlan("COMPARE_PERIODS", metric, periods, "explicit")
+        return SalesPlan("COMPARE_PERIODS", metric, periods, "explicit",
+                         period_selection="EXPLICIT_SET")
     if len(periods) == 1:
         current = date.fromisoformat(periods[0] + "-01")
         if re.search(r"cung ky nam truoc|cung thang nam truoc|cung ky nam ngoai|\byoy\b|year.over.year", value):

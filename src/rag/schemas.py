@@ -10,6 +10,7 @@ class RetrievalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     query: str = Field(min_length=1)
     restaurant_key: str | None = None
+    restaurant_id: str | None = None
     date_from: datetime | None = None
     date_to: datetime | None = None
     sentiment: Literal["positive", "neutral", "negative"] | None = None

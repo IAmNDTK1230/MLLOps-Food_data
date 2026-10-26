@@ -1,0 +1,42 @@
+{
+  "dataset_version": "review_2025_2026_v1",
+  "judgment_scope": "Six known-positive reviews from the new corpus; unjudged hits may also be relevant.",
+  "cases": [
+    {
+      "query": "Trà sữa đậm vị và topping nhiều?",
+      "restaurant_id": "14",
+      "known_relevant_review_ids": ["r26_b07dc8bf08643234a424337a2e46cbe7b0be0c341ec8e320a35243db10f7188c"],
+      "reason": "The review explicitly says the milk tea is rich and the toppings are plentiful."
+    },
+    {
+      "query": "Không gian đẹp và món ăn ngon?",
+      "restaurant_id": "2998",
+      "known_relevant_review_ids": ["r26_f603afe75f498847fbd0942fe675fd5b5ac5a0d30bf8b88b4e09caee5e1790f7"],
+      "reason": "The review directly praises both the venue and two dishes."
+    },
+    {
+      "query": "Giá bình dân, món ngon?",
+      "restaurant_id": "2953",
+      "known_relevant_review_ids": ["r26_f1f9c187a4b660356139e2f3c04d5c8f433f221e861fef0ac99e03fb34c883c0"],
+      "reason": "The review directly calls the food good and the price affordable."
+    },
+    {
+      "query": "Cháo có mùi khê và vị khó chịu?",
+      "restaurant_id": "109",
+      "known_relevant_review_ids": ["r26_8e89bb476655e9c101640f1e4689f385f29103eec37059da3a01af0c2491d7c7"],
+      "reason": "The review complains about a burnt smell and unpleasant taste of the porridge."
+    },
+    {
+      "query": "Bánh mì ăn nhiều lần vẫn ngon?",
+      "restaurant_id": "115",
+      "known_relevant_review_ids": ["r26_c92a4f1a524a8945ea1b24d2279afad1835d1a27093c76dc089156f2559e3501"],
+      "reason": "The review says the customer has eaten the banh mi ten times and still likes it."
+    },
+    {
+      "query": "Nước uống ngon, giá rẻ, phục vụ nhiệt tình?",
+      "restaurant_id": "32",
+      "known_relevant_review_ids": ["r26_e181a9a175809ff563ae880d845bc69472103fbac03c37948b360456010071fb"],
+      "reason": "The review explicitly praises drinks, price and service."
+    }
+  ]
+}
