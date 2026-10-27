@@ -10,6 +10,8 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.api import api
+from src.foody import review_runtime
+from src.foody.review_paths import DATA_VERSION
 from src.monitoring import metrics as rag_metrics
 from src.streaming.events import ReviewEvent, from_review
 from src.warehouse.loader import _date_key, _number
@@ -46,6 +48,38 @@ def test_api_exposes_bounded_metrics_and_versions():
     assert version.status_code == 200
     assert version.json()["warehouse_schema_version"] == "004"
     assert "qwen_model" in version.json()
+
+
+def test_active_manifest_reads_real_file(monkeypatch, tmp_path):
+    manifest = {"data_version": DATA_VERSION, "row_count": 7, "restaurant_count": 2}
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(review_runtime, "MANIFEST", path)
+    monkeypatch.setattr(review_runtime, "new_corpus_active", lambda: True)
+
+    assert review_runtime.active_manifest() == manifest
+
+
+def test_active_manifest_missing_has_unknown_counts(monkeypatch, tmp_path):
+    monkeypatch.setattr(review_runtime, "MANIFEST", tmp_path / "missing.json")
+    monkeypatch.setattr(review_runtime, "new_corpus_active", lambda: True)
+
+    assert review_runtime.active_manifest() == {
+        "data_version": DATA_VERSION, "status": "artifact_unavailable",
+        "row_count": None, "document_count": None, "restaurant_count": None,
+        "date_min": None, "date_max": None,
+    }
+
+
+def test_version_without_runtime_manifest(monkeypatch, tmp_path):
+    monkeypatch.setattr(review_runtime, "MANIFEST", tmp_path / "missing.json")
+    monkeypatch.setattr(review_runtime, "new_corpus_active", lambda: True)
+
+    response = TestClient(api).get("/version")
+
+    assert response.status_code == 200
+    assert response.json()["review_data_version"] == DATA_VERSION
+    assert response.json()["review_count"] is None
 
 
 def test_devops_configs_have_one_topic_and_dashboard():

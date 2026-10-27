@@ -5,8 +5,10 @@ from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 
+import pandas as pd
 from streamlit.testing.v1 import AppTest, app_test
 
+from src.foody import review_runtime
 from src.ui import monitoring_view, sales_view
 
 
@@ -25,6 +27,15 @@ def test_three_workspaces_render_without_automatic_ai(monkeypatch, tmp_path):
     monkeypatch.setattr(sales_view, "month_snapshot", lambda _id, _month: monthly)
     monkeypatch.setattr(monitoring_view, "prometheus_snapshot", lambda: {
         name: None for name in monitoring_view.QUERIES})
+    monkeypatch.setattr(review_runtime, "MANIFEST", tmp_path / "missing.json")
+    reviews = pd.DataFrame([{
+        "restaurant_id": "1", "restaurant_name": "Fixture", "review_id": "review-1",
+        "review_timestamp": pd.Timestamp("2026-01-01"), "raw_rating": 8,
+        "text": "Món ăn ngon", "predicted_sentiment": "positive",
+        "predicted_aspects": ["food"], "detected_issues": [],
+        "sentiment_confidence": 0.9,
+    }])
+    monkeypatch.setattr(review_runtime, "review_table", lambda: reviews)
 
     app = AppTest.from_file(Path(__file__).resolve().parents[1] / "app/app.py",
                             default_timeout=20).run()
@@ -36,12 +47,8 @@ def test_three_workspaces_render_without_automatic_ai(monkeypatch, tmp_path):
     app.sidebar.radio[0].set_value("Review Intelligence").run()
     assert not app.exception
     assert len([widget for widget in app.selectbox if widget.label == "Restaurant"]) == 1
-    from src.foody.review_runtime import active_manifest, new_corpus_active
-
-    if new_corpus_active():
-        assert len(app.selectbox[0].options) == active_manifest()["restaurant_count"]
-        assert any(f"{active_manifest()['row_count']:,} Reviews" in item.value
-                   for item in app.markdown)
+    assert app.selectbox[0].options == ["Fixture"]
+    assert any("Foody Reviews" in item.value for item in app.markdown)
     assert any("Customer Overview" in item.value for item in app.subheader)
     assert any("Recent Reviews" in item.value for item in app.subheader)
     assert any("AI Review" in item.value for item in app.subheader)

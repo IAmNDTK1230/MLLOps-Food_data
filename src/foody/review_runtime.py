@@ -20,7 +20,11 @@ def new_corpus_active():
 
 def active_manifest():
     if new_corpus_active():
-        return json.loads(MANIFEST.read_text(encoding="utf-8"))
+        if MANIFEST.exists():
+            return json.loads(MANIFEST.read_text(encoding="utf-8"))
+        return {"data_version": DATA_VERSION, "status": "artifact_unavailable",
+                "row_count": None, "document_count": None,
+                "restaurant_count": None, "date_min": None, "date_max": None}
     legacy = Path("data/foody/vector_store/index_manifest.json")
     return json.loads(legacy.read_text(encoding="utf-8"))
 
